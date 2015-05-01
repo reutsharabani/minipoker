@@ -1,51 +1,26 @@
 __author__ = 'reut'
 
-from random import choice, shuffle
-from itertools import combinations
+from random import choice
+from logic.deck import *
+from collections import defaultdict
+from logic.poker.players import *
 
 
 class Pot(object):
-    pass
 
-SUITS = ["Hearts", "Diamonds", "Clubs", "Spades"]
+    def __init__(self, small_blind):
+        self.current_bet = small_blind * 2
+        self.bets = defaultdict(int)
+        self.last_raise = small_blind
 
+    def player_bet(self, player):
+        return self.bets[player]
 
-class Card(object):
-    def __init__(self, value, suit):
-        self.value = value
-        self.suit = suit
+    def amount_to_call(self, player):
+        return self.current_bet - self.bets[player]
 
-    def __gt__(self, other):
-        if not isinstance(other, Card):
-            return False
-        return self.value > other.value
-
-    def __eq__(self, other):
-        if not isinstance(other, Card):
-            return False
-        return self.value == other.value and self.suit == other.suit
-
-    def __repr__(self):
-        return str(self.value) + self.suit[0]
-
-
-
-
-
-class Deck(object):
-
-    def __init__(self):
-
-        self.cards = [Card(value, suit) for value in range(13) for suit in SUITS]
-        # don't forget to shuffle
-        self.shuffle()
-
-    def shuffle(self):
-        shuffle(self.cards)
-
-    def draw(self, number=1):
-        drawn, self.cards = self.cards.pop(0), self.cards[number:]
-        return drawn
+    def minimum_to_bet(self, player):
+        return self.current_bet + self.last_raise - self.player_bet(player)
 
 
 class Poker(object):
@@ -57,7 +32,7 @@ class Poker(object):
         self.button_player = choice(self.players)
         self.small_blind = 1
         self.betting_player = None
-        self.pot = Pot()
+        self.pot = None
         self.deck = Deck()
         self.community_cards = []
 
@@ -125,12 +100,16 @@ class Poker(object):
 
     def start_round(self):
 
+        self.pot = Pot(self.small_blind)
+
         # set all players to active for this round
         self.active_players = self.players[:]
 
         print("Dealing cards")
         for player in self.active_players:
             player.set_pocket(self.deck.draw(), self.deck.draw())
+            player.first_bet = True
+            player.folded = False
 
     def play(self):
 
@@ -178,63 +157,7 @@ class Poker(object):
         return sorted(self.active_players, key=lambda x: x.get_best_hand(self.community_cards))
 
 
-class NotEnoughMoneyException(Exception):
-    pass
-
-
-class Player(object):
-
-    def __init__(self, name, starting_money):
-        self.name = name
-        self.pocket = None
-        self.money = starting_money
-
-    def set_pocket(self, card1, card2):
-        self.pocket = [card1, card2]
-
-    def bet(self, amount):
-        if amount > self.money:
-            raise NotEnoughMoneyException("Player " + self.name + " does not have enough money (" + self.money + "/" + amount + ")")
-        self.money -= amount
-
-    def force_bet(self, amount):
-        """
-        Force a bet from the player, even if the amount exceeds the player's funds
-        :param amount: the amount to force on the player
-        :return:
-                amount of money actually taken
-        """
-        amount = min(amount, self.money)
-        self.bet(amount)
-        return amount
-
-    def interact(self, game):
-        return "blah"
-
-    def is_betting(self, game):
-        return choice([False] * 10 + [True])
-
-    def get_best_hand(self, community_cards):
-        # TODO: add aces multiple value (1, 14)
-        print("Community Cards: %s" % community_cards)
-        print("Pocket cards: %s" % self.pocket)
-        best_hand = max(combinations(community_cards + self.pocket, r=5))
-        print("Best hand for player %s: %s" % (self.name, best_hand))
-        print("Community cards %s:" % community_cards)
-        print("Pocket cards %s:" % self.pocket)
-        return best_hand
-
-import unittest
-
-
-class TestPokerGame(unittest.TestCase):
-
-    def setUp(self):
-        self.game = Poker([Player("Player" + str(i), 100) for i in range(3)])
-
-    def test_test(self):
-        print("Community cards: " + ','.join(self.game.community_cards))
-
-    def test_active_players_simple(self):
-        self.game.play()
-        assert self.game.active_players == self.game.players
+if __name__ == "__main__":
+    print("Starting a pvp poker game")
+    game = Poker([HumanPlayer("Human %d" % i, 100) for i in range(5)])
+    game.play()
