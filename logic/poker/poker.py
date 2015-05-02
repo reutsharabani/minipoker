@@ -62,8 +62,6 @@ class Round(object):
         LOGGER.info("Dealing cards")
         for player in self.players:
             player.set_pocket(self.deck.draw(), self.deck.draw())
-            player.first_bet = True
-            player.folded = False
 
     def bet(self, player, amount):
         self.pot.bet(player, amount)
