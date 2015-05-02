@@ -28,7 +28,7 @@ class Deck(object):
 
     def __init__(self):
 
-        self.cards = [Card(value, suit) for value in range(13) for suit in SUITS]
+        self.cards = [Card(value, suit) for value in range(1, 14) for suit in SUITS]
         # don't forget to shuffle
         self.shuffle()
 

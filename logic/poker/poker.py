@@ -26,9 +26,16 @@ class Pot(object):
 class Poker(object):
 
     def __init__(self, players):
+
+        # list of players who ran out of money
         self.finished_players = []
+
+        # list of all players in game
         self.players = players
-        self.active_players = [players]
+
+        # list of active players in round
+        self.active_players = []
+
         self.button_player = choice(self.players)
         self.small_blind = 1
         self.betting_player = None
@@ -37,10 +44,7 @@ class Poker(object):
         self.community_cards = []
 
     def winner(self):
-        return self.players[0] if len(self.players) == 1 else None
-
-    def after_active_player(self, player, offset=1):
-        return self.after(player, self.active_players, offset)
+        return self.active_players[0] if len(self.active_players) == 1 else None
 
     @staticmethod
     def after(player, players, offset=1):
@@ -62,14 +66,14 @@ class Poker(object):
 
     def set_next_betting_player(self):
         starting_player = self.betting_player
-        self.betting_player = self.after_active_player(self.betting_player)
+        self.betting_player = self.after(self.betting_player, self.players)
         print("Starting player: " + self.betting_player.name)
         while starting_player != self.betting_player:
             if self.betting_player.is_betting(self):
                 # print("Found betting player")
                 break
             # print("Did not find betting player")
-            self.betting_player = self.after_active_player(self.betting_player)
+            self.betting_player = self.after(self.betting_player, self.players)
 
         if starting_player == self.betting_player:
             self.betting_player = None
@@ -77,14 +81,20 @@ class Poker(object):
         return self.betting_player
 
     def pre_flop_betting(self):
+        if self.winner() is not None:
+            return
         self.betting_player = self.after(self.big_blind_player(), self.active_players)
         self.place_bets()
 
     def pre_turn_betting(self):
+        if self.winner() is not None:
+            return
         self.betting_player = self.after(self.button_player, self.active_players)
         self.place_bets()
 
     def pre_river_betting(self):
+        if self.winner() is not None:
+            return
         self.betting_player = self.after(self.button_player, self.active_players)
         self.place_bets()
 
@@ -93,7 +103,9 @@ class Poker(object):
         # self.betting_player will be set to None
         while self.betting_player is not None:
             print("Searching for next betting player (is it " + self.betting_player.name + ") ?")
-            self.betting_player.interact(self)
+            action = self.betting_player.interact(self)
+            print("%s chose Action: %s" % (self.betting_player.name, action.__class__.__name__))
+            action.apply()
             self.set_next_betting_player()
 
         print("Done betting for pre_flop_round")
@@ -159,5 +171,5 @@ class Poker(object):
 
 if __name__ == "__main__":
     print("Starting a pvp poker game")
-    game = Poker([HumanPlayer("Human %d" % i, 100) for i in range(5)])
+    game = Poker([HumanPlayer("Human %d" % i, 100) for i in range(2)])
     game.play()

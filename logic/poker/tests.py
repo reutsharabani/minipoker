@@ -1,6 +1,5 @@
 __author__ = 'reut'
 
-from logic.poker.players import HumanPlayer
 from logic.poker.hands import *
 import unittest
 from logic.poker.poker import *

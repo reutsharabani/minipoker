@@ -46,7 +46,7 @@ class Fold(Action):
         return not player.folded
 
     def apply(self):
-        self.player.folded = True
+        self.game.active_players.remove(self.player)
 
 
 class Check(Action):
@@ -101,7 +101,6 @@ class BasePlayer(object):
         self.name = name
         self.pocket = None
         self.money = starting_money
-        self.folded = False
         self.first_bet = False
         self.checked = False
 
@@ -131,7 +130,7 @@ class BasePlayer(object):
         raise NotImplementedError("Interact is not implemented on the Player's base class")
 
     def is_betting(self, game):
-        return len(game.active_players) > 1 and (self.first_bet or (not self.folded and self.money > 0))
+        return len(game.active_players) > 1 and (self.first_bet or (not self.is_folded(game) and self.money > 0))
 
     def get_best_hand(self, community_cards):
         # TODO: add aces multiple value (1, 14)
@@ -144,7 +143,7 @@ class BasePlayer(object):
         return best_hand
 
     def available_actions(self, game):
-        return filter(lambda x: x.is_valid(self, game), [Check, Call, Bet, Fold])
+        return list(filter(lambda x: x.is_valid(self, game), [Check, Call, Bet, Fold]))
 
     def choose_action_message(self, game):
         return os.linesep.join([
@@ -162,6 +161,17 @@ class HumanPlayer(BasePlayer):
         action = None
         while action is None:
             try:
-                action = self.available_actions(game)[int(input(self.choose_action_message(game)))]
+                available_actions = self.available_actions(game)
+                print(available_actions)
+                action = available_actions[int(input(self.choose_action_message(game)))]
+
+                while isinstance(action, AmountableAction):
+                    # choose action amount (example: bet, 50)
+                    while 0 > amount > self.money:
+                        amount = int(input("How much?"))
+                    return action(self, game, amount)
+                return action(self, game)
             except ValueError:
+                pass
+            except IndexError:
                 pass
