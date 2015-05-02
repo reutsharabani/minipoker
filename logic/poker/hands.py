@@ -248,7 +248,7 @@ class Pair(Hand):
 
     def compare_same(self, other):
         if self.__repeated_cards2() != other.__repeated_cards2():
-            return self.__repeated_cards2() > other.__repeated_card2
+            return self.__repeated_cards2() > other.__repeated_cards2()
 
         return self.compare_cards_high_to_low(other)
 
