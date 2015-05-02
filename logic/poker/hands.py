@@ -4,7 +4,7 @@ from collections import Counter
 import logging
 
 LOGGER = logging.getLogger('hands')
-LEVEL = logging.DEBUG
+LEVEL = logging.INFO
 stream_handler = logging.StreamHandler()
 LOGGER.setLevel(LEVEL)
 LOGGER.addHandler(stream_handler)
@@ -100,7 +100,7 @@ class Hand(object):
         raise NotImplemented("is_valid not implemented for abstract hand!")
 
     def __str__(self):
-        return ','.join([str(card.value) + card.suit[0] for card in self.cards])
+        return "%s - %s" % (self.__class__, ','.join([str(card.value) + card.suit[0] for card in self.cards]))
 
 
 class StraightFlush(Hand):

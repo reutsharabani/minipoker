@@ -141,25 +141,25 @@ class Round(object):
 
     def play(self):
 
-        while self.winner() is None:
+        LOGGER.info("Playing another round of poker")
 
-            LOGGER.info("Playing another round of poker")
+        self.take_blinds()
 
-            self.take_blinds()
+        LOGGER.info("Playing first round (pre-flop)")
+        self.pre_flop_betting()
+        self.open_flop_cards()
 
-            LOGGER.info("Playing first round (pre-flop)")
-            self.pre_flop_betting()
-            self.open_flop_cards()
+        LOGGER.info("Playing first round (pre-turn)")
+        self.pre_turn_betting()
+        self.open_turn_cards()
 
-            LOGGER.info("Playing first round (pre-turn)")
-            self.pre_turn_betting()
-            self.open_turn_cards()
-
-            LOGGER.info("Playing first round (pre-river)")
-            self.pre_river_betting()
-            self.open_river_cards()
-
-        LOGGER.info("Round winner: %s" % self.winner())
+        LOGGER.info("Playing first round (pre-river)")
+        self.pre_river_betting()
+        self.open_river_cards()
+        LOGGER.info("Round winners:")
+        for winner in self.get_round_winners():
+            LOGGER.info("%s" % winner)
+        return dict(self.finish_round())
 
     def open_card(self):
         self.community_cards.append(self.deck.draw())
@@ -177,11 +177,15 @@ class Round(object):
 
     def finish_round(self):
         for winner in self.get_round_winners():
-            LOGGER.info("Giving pot to player: " + winner.name)
-            winner.money += self.pot.take_pot_for_player(winner)
+            winnings = self.pot.take_pot_for_player(winner)
+            LOGGER.info("Giving winnings (%d) to player: %s [%s]" % (winnings, winner.name, winner.best_hand(self.community_cards)))
+            winner.money += winnings
+            yield winner, winnings
 
     def get_round_winners(self):
-        return sorted(set(self.players) - set(self.folded_players), key=lambda x: x.best_hand(self.community_cards))
+        return sorted(
+            set(self.players) - set(self.folded_players), key=lambda x: x.best_hand(self.community_cards), reverse=True
+        )
 
 
 class Poker(object):
@@ -221,27 +225,25 @@ class Poker(object):
             for player in self.players:
                 LOGGER.info("%s" % player)
             round_ = Round(self.players, self.button_player, self.small_blind)
-            round_.play()
+            winnings = round_.play()
             self.rounds.append(round_)
 
+            for player, winning in winnings.items():
+                print("%s won %d" % (player, winning))
             # move button (before possibly removing button player)
             self.advance_button_player()
 
-            # give winners their money
-            for winner in round_.get_round_winners():
-                LOGGER.info("Giving money to winner: %s" % winner)
-                winner_money = round_.pot.take_pot_for_player(winner)
-                LOGGER.info("won: %d" % winner_money)
-                winner.money += winner_money
             # set up players
             for player in self.players:
                 if player.money == 0:
                     LOGGER.info("Player %s finished the game" % str(player))
                     self.finished_players.append(player)
                     self.players.remove(player)
+        return self.winner()
 
 
 if __name__ == "__main__":
     LOGGER.info("Starting a pvp poker game")
     game = Poker([HumanPlayer("Human %d" % i, 100) for i in range(2)])
-    game.play()
+    winner = game.play()
+    print("%s won the game!" % winner)

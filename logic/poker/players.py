@@ -6,7 +6,7 @@ import logging
 from logic.poker.hands import Hand
 
 LOGGER = logging.getLogger('poker')
-LEVEL = logging.DEBUG
+LEVEL = logging.INFO
 stream_handler = logging.StreamHandler()
 LOGGER.setLevel(LEVEL)
 LOGGER.addHandler(stream_handler)
