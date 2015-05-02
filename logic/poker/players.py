@@ -71,17 +71,25 @@ class Call(Action):
         return player.money >= round_.pot.amount_to_call(player) > 0
 
     def apply(self):
-        self.player.money -= self.round.pot.amount_to_call(self.player)
+        amount = self.round.pot.amount_to_call(self.player)
+        self.player.money -= amount
+        self.round.bet(self.player, amount)
 
 
 class Bet(AmountableAction):
 
-    def __init__(self, player, round_, amount):
+    def __init__(self, player, round_):
+        # TODO: change bet_max to actual max with repect to round
         bet_min, bet_max = round_.pot.minimum_to_bet(player), player.money
-        if bet_max < amount < bet_min:
-            raise NotEnoughMoneyException("%s can't bet %d - bet has to be between %d to %d!" % (
-                player.name, amount, bet_min, bet_max
-            ))
+        LOGGER.debug("Setting bet limits to %d-%d" % (bet_min, bet_max))
+        amount = 0
+        # choose action amount (example: bet, 50)
+        while bet_min > amount or amount > bet_max:
+            try:
+                amount = int(input("How much [%d-%d]?" % (bet_min, bet_max)))
+            except ValueError:
+                print("Value has to be between 0 and ")
+
         super(Bet, self).__init__(player, round_, amount)
 
     @staticmethod
@@ -89,7 +97,8 @@ class Bet(AmountableAction):
         return player.money >= round_.pot.minimum_to_bet(player) > 0
 
     def apply(self):
-        self.player.money -= self.round.pot.amount_to_call(self.player)
+        self.player.money -= self.amount
+        self.round.bet(self.player, self.amount)
 
 
 class NotEnoughMoneyException(Exception):
@@ -172,12 +181,6 @@ class HumanPlayer(BasePlayer):
             try:
                 available_actions = self.available_actions(round_)
                 action = available_actions[int(input(self.choose_action_message(round_)))]
-
-                while isinstance(action, AmountableAction):
-                    # choose action amount (example: bet, 50)
-                    while 0 > amount > self.money:
-                        amount = int(input("How much?"))
-                    return action(self, round_, amount)
                 return action(self, round_)
             except ValueError:
                 pass

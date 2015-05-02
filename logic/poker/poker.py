@@ -9,9 +9,12 @@ from logic.poker.players import *
 class Pot(object):
 
     def __init__(self, small_blind):
-        self.current_bet = small_blind * 2
         self.bets = defaultdict(int)
-        self.last_raise = small_blind
+        self.last_raise = small_blind * 2
+
+    @property
+    def current_bet(self):
+        return max(self.bets.values())
 
     def player_bet(self, player):
         return self.bets[player]
@@ -20,7 +23,10 @@ class Pot(object):
         return self.current_bet - self.bets[player]
 
     def minimum_to_bet(self, player):
-        return self.current_bet + self.last_raise - self.player_bet(player)
+        LOGGER.debug("current bet: %d, last raise: %d, player_bet: %d" % (
+            self.current_bet, self.last_raise, self.player_bet(player)
+        ))
+        return max(1, self.amount_to_call(player) + self.last_raise)
 
     def take_pot_for_player(self, player):
         player_bet = self.player_bet(player)
@@ -37,6 +43,7 @@ class Pot(object):
         return winnings
 
     def bet(self, player, amount):
+        LOGGER.info("%s bets %d" % (player, amount))
         self.bets[player] += amount
 
 
