@@ -126,6 +126,8 @@ class Round(object):
     def place_bets(self):
         # when no betting players are left
         # self.betting_player will be set to None
+        for player in self.active_players:
+            player.first_bet = True
 
         if not self.betting_player.is_betting(self):
             LOGGER.info("Skipping player: %s" % str(self.betting_player))
@@ -157,8 +159,8 @@ class Round(object):
         self.pre_river_betting()
         self.open_river_cards()
         LOGGER.info("Round winners:")
-        for winner in self.get_round_winners():
-            LOGGER.info("%s" % winner)
+        for winner_ in self.get_round_winners():
+            LOGGER.info("%s" % winner_)
         return dict(self.finish_round())
 
     def open_card(self):
@@ -176,11 +178,11 @@ class Round(object):
         self.open_card()
 
     def finish_round(self):
-        for winner in self.get_round_winners():
-            winnings = self.pot.take_pot_for_player(winner)
-            LOGGER.info("Giving winnings (%d) to player: %s [%s]" % (winnings, winner.name, winner.best_hand(self.community_cards)))
-            winner.money += winnings
-            yield winner, winnings
+        for winner_ in self.get_round_winners():
+            winnings = self.pot.take_pot_for_player(winner_)
+            LOGGER.info("Giving winnings (%d) to player: %s [%s]" % (winnings, winner_.name, winner_.best_hand(self.community_cards)))
+            winner_.money += winnings
+            yield winner_, winnings
 
     def get_round_winners(self):
         return sorted(

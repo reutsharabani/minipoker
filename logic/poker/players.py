@@ -147,7 +147,9 @@ class BasePlayer(object):
         return round_.is_folded(self)
 
     def is_betting(self, round_):
-        return len(round_.active_players) > 1 and (self.first_bet or (not self.is_folded(round_) and self.money > 0))
+        return len(round_.active_players) > 1 and (
+            self.first_bet or (not self.is_folded(round_) and self.money > 0 and round_.pot.amount_to_call(self) > 0)
+        )
 
     def possible_hands(self, community_cards):
         return [Hand.get_hand(cards) for cards in combinations(community_cards + self.pocket, r=5)]
