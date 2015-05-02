@@ -9,6 +9,7 @@ stream_handler = logging.StreamHandler()
 LOGGER.setLevel(LEVEL)
 LOGGER.addHandler(stream_handler)
 
+
 class Card(object):
     def __init__(self, value, suit):
         self.value = value
@@ -51,7 +52,7 @@ class Hand(object):
         if self.rank != other.rank:
             return self.rank > other.rank
 
-        return self.__compare_same(other)
+        return self.compare_same(other)
 
     def __get_repeated_card(self, n):
         """
@@ -61,7 +62,7 @@ class Hand(object):
         """
         return self.values_counter.most_common(5)[n]
 
-    def __compare_cards_high_to_low(self, other):
+    def compare_cards_high_to_low(self, other):
         card, other_card = None, None
         for card, other_card in zip(self.cards, other.cards):
             if card.value != other_card.value:
@@ -69,7 +70,7 @@ class Hand(object):
 
         return card.value > other_card.value
 
-    def __compare_same(self, other):
+    def compare_same(self, other):
         raise NotImplementedError("Can not compare an abstract hand!")
 
     @staticmethod
@@ -98,6 +99,8 @@ class Hand(object):
     def is_valid(cards):
         raise NotImplemented("is_valid not implemented for abstract hand!")
 
+    def __str__(self):
+        return ','.join([str(card.value) + card.suit[0] for card in self.cards])
 
 class StraightFlush(Hand):
 
@@ -110,8 +113,8 @@ class StraightFlush(Hand):
     def is_valid(cards):
         return Flush.is_valid(cards) and Straight.is_valid(cards)
 
-    def __compare_same(self, other):
-        return self.__compare_cards_high_to_low(other)
+    def compare_same(self, other):
+        return self.compare_cards_high_to_low(other)
 
 
 class FourOfAKind(Hand):
@@ -129,7 +132,7 @@ class FourOfAKind(Hand):
     def __repeated_card4(self):
         return self.values_counter.most_common(1)[0]
 
-    def __compare_same(self, other):
+    def compare_same(self, other):
         return self.__repeated_card4() > other.__repeated_card4()
 
 
@@ -148,7 +151,7 @@ class FullHouse(Hand):
     def __repeated_card3(self):
         return self.values_counter.most_common(1)[0]
 
-    def __compare_same(self, other):
+    def compare_same(self, other):
         return self.__repeated_card3() > other.__repeated_card3()
 
 
@@ -163,8 +166,8 @@ class Flush(Hand):
     def is_valid(cards):
         return all(card.suit == cards[0].suit for card in cards)
 
-    def __compare_same(self, other):
-        return self.__compare_cards_high_to_low(other)
+    def compare_same(self, other):
+        return self.compare_cards_high_to_low(other)
 
 
 class Straight(Hand):
@@ -178,8 +181,8 @@ class Straight(Hand):
     def is_valid(cards):
         return all(card.value == v for card, v in zip(cards, range(cards[0].value, cards[0].value + 5)))
 
-    def __compare_same(self, other):
-        self.__compare_cards_high_to_low(other)
+    def compare_same(self, other):
+        self.compare_cards_high_to_low(other)
 
 
 class ThreeOfAKind(Hand):
@@ -197,7 +200,7 @@ class ThreeOfAKind(Hand):
     def __repeated_card3(self):
         return self.values_counter.most_common(1)[0]
 
-    def __compare_same(self, other):
+    def compare_same(self, other):
         return self.__repeated_card3() > other.__repeated_card3()
 
 
@@ -216,7 +219,7 @@ class TwoPairs(Hand):
     def __repeated_cards2_2(self):
         return self.values_counter.most_common(2)
 
-    def __compare_same(self, other):
+    def compare_same(self, other):
         high_pair, low_pair = self.__repeated_cards2_2()
         other_high_pair, other_low_pair = other.__repeated_cards2_2()
         if high_pair != other_high_pair:
@@ -224,7 +227,7 @@ class TwoPairs(Hand):
         if low_pair != other_low_pair:
             return low_pair > other_low_pair
 
-        return self.__compare_cards_high_to_low
+        return self.compare_cards_high_to_low
 
 
 class Pair(Hand):
@@ -242,11 +245,11 @@ class Pair(Hand):
     def __repeated_cards2(self):
         return self.values_counter.most_common(1)[0]
 
-    def __compare_same(self, other):
+    def compare_same(self, other):
         if self.__repeated_cards2() != other.__repeated_cards2():
             return self.__repeated_cards2() > other.__repeated_card2
 
-        return self.__compare_cards_high_to_low(other)
+        return self.compare_cards_high_to_low(other)
 
 
 class HighCard(Hand):
@@ -260,8 +263,8 @@ class HighCard(Hand):
     def is_valid(cards):
         return
 
-    def __compare_same(self, other):
-        pass
+    def compare_same(self, other):
+        return self.compare_cards_high_to_low(other)
 
 import unittest
 

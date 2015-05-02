@@ -166,7 +166,7 @@ class Poker(object):
             print("Giving pot to player: " + winner.name)
 
     def get_round_winners(self):
-        return sorted(self.active_players, key=lambda x: x.get_best_hand(self.community_cards))
+        return sorted(self.active_players, key=lambda x: x.best_hand(self.community_cards))
 
 
 if __name__ == "__main__":

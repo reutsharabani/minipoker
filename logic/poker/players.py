@@ -3,6 +3,7 @@ __author__ = 'reut'
 from itertools import combinations
 import os
 import logging
+from logic.poker.hands import Hand
 
 LOGGER = logging.getLogger('poker')
 LEVEL = logging.DEBUG
@@ -132,11 +133,15 @@ class BasePlayer(object):
     def is_betting(self, game):
         return len(game.active_players) > 1 and (self.first_bet or (not self.is_folded(game) and self.money > 0))
 
-    def get_best_hand(self, community_cards):
+    def possible_hands(self, community_cards):
+        return [Hand.get_hand(cards) for cards in combinations(community_cards + self.pocket, r=5)]
+
+    def best_hand(self, community_cards):
         # TODO: add aces multiple value (1, 14)
         print("Community Cards: %s" % community_cards)
         print("Pocket cards: %s" % self.pocket)
-        best_hand = max(combinations(community_cards + self.pocket, r=5))
+        print("possible hands:\n%s" % '\n'.join(map(str, self.possible_hands(community_cards))))
+        best_hand = max(self.possible_hands(community_cards))
         print("Best hand for player %s: %s" % (self.name, best_hand))
         print("Community cards %s:" % community_cards)
         print("Pocket cards %s:" % self.pocket)
