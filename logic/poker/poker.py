@@ -67,7 +67,7 @@ class Poker(object):
     def set_next_betting_player(self):
         starting_player = self.betting_player
         self.betting_player = self.after(self.betting_player, self.players)
-        print("Starting player: " + self.betting_player.name)
+        LOGGER.debug("Starting player: " + self.betting_player.name)
         while starting_player != self.betting_player:
             if self.betting_player.is_betting(self):
                 # print("Found betting player")
@@ -102,13 +102,12 @@ class Poker(object):
         # when no betting players are left
         # self.betting_player will be set to None
         while self.betting_player is not None:
-            print("Searching for next betting player (is it " + self.betting_player.name + ") ?")
             action = self.betting_player.interact(self)
-            print("%s chose Action: %s" % (self.betting_player.name, action.__class__.__name__))
+            LOGGER.info("%s chose Action: %s" % (self.betting_player.name, action.__class__.__name__))
             action.apply()
             self.set_next_betting_player()
 
-        print("Done betting for pre_flop_round")
+        LOGGER.info("Done betting for pre_flop_round")
 
     def start_round(self):
 
@@ -117,7 +116,7 @@ class Poker(object):
         # set all players to active for this round
         self.active_players = self.players[:]
 
-        print("Dealing cards")
+        LOGGER.info("Dealing cards")
         for player in self.active_players:
             player.set_pocket(self.deck.draw(), self.deck.draw())
             player.first_bet = True
@@ -129,19 +128,19 @@ class Poker(object):
 
             self.start_round()
 
-            print("Playing another round of poker")
+            LOGGER.info("Playing another round of poker")
 
             self.take_blinds()
 
-            print("Playing first round (pre-flop)")
+            LOGGER.info("Playing first round (pre-flop)")
             self.pre_flop_betting()
             self.open_flop_cards()
 
-            print("Playing first round (pre-turn)")
+            LOGGER.info("Playing first round (pre-turn)")
             self.pre_turn_betting()
             self.open_turn_cards()
 
-            print("Playing first round (pre-river)")
+            LOGGER.info("Playing first round (pre-river)")
             self.pre_river_betting()
             self.open_river_cards()
 
@@ -163,13 +162,13 @@ class Poker(object):
 
     def finish_round(self):
         for winner in self.get_round_winners():
-            print("Giving pot to player: " + winner.name)
+            LOGGER.info("Giving pot to player: " + winner.name)
 
     def get_round_winners(self):
         return sorted(self.active_players, key=lambda x: x.best_hand(self.community_cards))
 
 
 if __name__ == "__main__":
-    print("Starting a pvp poker game")
+    LOGGER.info("Starting a pvp poker game")
     game = Poker([HumanPlayer("Human %d" % i, 100) for i in range(2)])
     game.play()

@@ -10,9 +10,6 @@ class TestPokerGame(unittest.TestCase):
     def setUp(self):
         self.game = Poker([HumanPlayer("Player" + str(i), 100) for i in range(3)])
 
-    def test_test(self):
-        print("Community cards: " + ','.join(self.game.community_cards))
-
     def test_active_players_simple(self):
         self.game.play()
         assert self.game.active_players == self.game.players

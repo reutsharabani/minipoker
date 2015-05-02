@@ -88,7 +88,7 @@ class Hand(object):
         ]
         for candidate in classification_candidates:
             if candidate.is_valid(cards):
-                print("%s: %s" % (candidate.__name__, str(cards)))
+                LOGGER.debug("%s: %s" % (candidate.__name__, str(cards)))
                 return candidate(cards)
 
         # nothing identified, play using highest cards
@@ -101,6 +101,7 @@ class Hand(object):
 
     def __str__(self):
         return ','.join([str(card.value) + card.suit[0] for card in self.cards])
+
 
 class StraightFlush(Hand):
 
