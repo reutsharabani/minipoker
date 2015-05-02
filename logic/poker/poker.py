@@ -22,17 +22,22 @@ class Pot(object):
     def minimum_to_bet(self, player):
         return self.current_bet + self.last_raise - self.player_bet(player)
 
-    def pot_for_player(self, player):
+    def take_pot_for_player(self, player):
         player_bet = self.player_bet(player)
 
         winnings = 0
         # take amount from all bets
-        for player, bet in self.bets.iteritems():
+        for player, bet in self.bets.items():
             # see how much is possible to take from player
             possible_to_take = min(bet, player_bet)
             winnings += possible_to_take
             # remove as much as possible from player
             self.bets[player] -= possible_to_take
+
+        return winnings
+
+    def bet(self, player, amount):
+        self.bets[player] += amount
 
 
 class Round(object):
@@ -53,6 +58,9 @@ class Round(object):
             player.first_bet = True
             player.folded = False
 
+    def bet(self, player, amount):
+        self.pot.bet(player, amount)
+
     def is_folded(self, player):
         return player in self.folded_players
 
@@ -65,8 +73,8 @@ class Round(object):
         return self.players[(index + 1) % len(self.players)]
 
     def take_blinds(self):
-        self.small_blind_player().force_bet(self.small_blind)
-        self.big_blind_player().force_bet(2 * self.small_blind)
+        self.small_blind_player().force_bet(self.small_blind, self)
+        self.big_blind_player().force_bet(2 * self.small_blind, self)
         return self.betting_player
 
     def small_blind_player(self):
@@ -145,6 +153,7 @@ class Round(object):
             self.open_river_cards()
 
         LOGGER.info("Round winner: %s" % self.winner())
+
     def open_card(self):
         self.community_cards.append(self.deck.draw())
 
@@ -162,7 +171,7 @@ class Round(object):
     def finish_round(self):
         for winner in self.get_round_winners():
             LOGGER.info("Giving pot to player: " + winner.name)
-            winner.money += self.pot.pot_for_player(winner)
+            winner.money += self.pot.take_pot_for_player(winner)
 
     def get_round_winners(self):
         return sorted(set(self.players) - set(self.folded_players), key=lambda x: x.best_hand(self.community_cards))
@@ -201,6 +210,9 @@ class Poker(object):
     def play(self):
         while self.winner() is None:
             LOGGER.info("Playing round #%d" % (len(self.rounds) + 1))
+            LOGGER.info("Players are:")
+            for player in self.players:
+                LOGGER.info("%s" % player)
             round_ = Round(self.players, self.button_player, self.small_blind)
             round_.play()
             self.rounds.append(round_)
@@ -208,6 +220,12 @@ class Poker(object):
             # move button (before possibly removing button player)
             self.advance_button_player()
 
+            # give winners their money
+            for winner in round_.get_round_winners():
+                LOGGER.info("Giving money to winner: %s" % winner)
+                winner_money = round_.pot.take_pot_for_player(winner)
+                LOGGER.info("won: %d" % winner_money)
+                winner.money += winner_money
             # set up players
             for player in self.players:
                 if player.money == 0:

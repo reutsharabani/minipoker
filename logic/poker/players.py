@@ -105,17 +105,21 @@ class BasePlayer(object):
         self.first_bet = False
         self.checked = False
 
+    def __str__(self):
+        return "[name: %s, money: %s]" % (self.name, self.money)
+
     def set_pocket(self, card1, card2):
         self.pocket = [card1, card2]
 
-    def bet(self, amount):
+    def bet(self, amount, round_):
         if amount > self.money:
             raise NotEnoughMoneyException(
                 "Player " + self.name + " does not have enough money (" + self.money + "/" + amount + ")"
             )
         self.money -= amount
+        round_.bet(self, amount)
 
-    def force_bet(self, amount):
+    def force_bet(self, amount, round_):
         """
         Force a bet from the player, even if the amount exceeds the player's funds
         :param amount: the amount to force on the player
@@ -124,7 +128,7 @@ class BasePlayer(object):
         """
         LOGGER.info("Forcing %s to bet %d" % (self.name, amount))
         amount = min(amount, self.money)
-        self.bet(amount)
+        self.bet(amount, round_)
         return amount
 
     def interact(self, round_):
