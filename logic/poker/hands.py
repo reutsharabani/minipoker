@@ -4,7 +4,7 @@ from collections import Counter
 import logging
 
 LOGGER = logging.getLogger('hands')
-LEVEL = logging.INFO
+LEVEL = logging.FATAL
 stream_handler = logging.StreamHandler()
 LOGGER.setLevel(LEVEL)
 LOGGER.addHandler(stream_handler)
