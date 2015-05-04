@@ -166,10 +166,12 @@ class BasePlayer(object):
 
     def choose_action_message(self, round_):
         return os.linesep.join([
-            "%s, please choose an action:" % self.name
+            "%s, your cards are %s please choose an action:" % (self.name, self.pocket)
         ] + ['. '.join(
             [str(index), action_name.__name__]
-        ) for index, action_name in enumerate(self.available_actions(round_))])
+        ) for index, action_name in enumerate(self.available_actions(round_))] + [
+            "Community cards: %s" % round_.community_cards
+        ] + ["%s bet %d" % (player, round_.pot.player_bet(player)) for player in round_.players])
 
 
 class HumanPlayer(BasePlayer):
