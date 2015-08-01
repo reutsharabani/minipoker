@@ -49,6 +49,9 @@ class Fold(Action):
     def apply(self):
         self.round.folded_players.append(self.player)
 
+    def __str__(self):
+        return "Player %s folds" % self.player
+
 
 class Check(Action):
 
@@ -60,21 +63,24 @@ class Check(Action):
     def apply(self):
         self.player.checked = True
 
+    def __str__(self):
+        return "Player %s checks" % self.player
 
-class Call(Action):
+
+class Call(AmountableAction):
 
     def __init__(self, player, round_):
-        super(Call, self).__init__(player, round_)
+        super(Call, self).__init__(player, round_, round_.pot.amount_to_call(player))
 
     @staticmethod
     def is_valid(player, round_):
         return player.money >= round_.pot.amount_to_call(player) > 0
 
     def apply(self):
-        amount = self.round.pot.amount_to_call(self.player)
-        self.player.money -= amount
-        self.round.bet(self.player, amount)
+        self.player.bet(self.amount, self.round)
 
+    def __str__(self):
+        return "Player %s calls %d" % (self.player, self.amount)
 
 class Bet(AmountableAction):
 
@@ -86,7 +92,7 @@ class Bet(AmountableAction):
         # choose action amount (example: bet, 50)
         while bet_min > amount or amount > bet_max:
             try:
-                amount = int(input("How much [%d-%d]?" % (bet_min, bet_max)))
+                amount = int(player.get_amount("How much [%d-%d]?" % (bet_min, bet_max)))
             except ValueError:
                 print("Value has to be between 0 and ")
 
@@ -143,6 +149,9 @@ class BasePlayer(object):
     def interact(self, round_):
         raise NotImplementedError("Interact is not implemented on the Player's base class")
 
+    def get_amount(self, description):
+        raise NotImplementedError("get_amount is not implemented on the Player's base class")
+
     def is_folded(self, round_):
         return round_.is_folded(self)
 
@@ -189,3 +198,6 @@ class HumanPlayer(BasePlayer):
                 pass
             except IndexError:
                 pass
+
+    def get_amount(self, description):
+        return input(description)
