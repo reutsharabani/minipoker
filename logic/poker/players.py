@@ -42,6 +42,8 @@ class AmountableAction(Action):
 
 class Fold(Action):
 
+    name = "Fold"
+
     @staticmethod
     def is_valid(player, round_):
         return player not in round_.folded_players
@@ -54,6 +56,8 @@ class Fold(Action):
 
 
 class Check(Action):
+
+    name = "Check"
 
     @staticmethod
     def is_valid(player, round_):
@@ -69,6 +73,7 @@ class Check(Action):
 
 class Call(AmountableAction):
 
+    name = "Call"
     def __init__(self, player, round_):
         super(Call, self).__init__(player, round_, round_.pot.amount_to_call(player))
 
@@ -84,6 +89,8 @@ class Call(AmountableAction):
 
 class Bet(AmountableAction):
 
+    name = "Bet"
+
     def __init__(self, player, round_):
         # TODO: change bet_max to actual max with repect to round
         bet_min, bet_max = round_.pot.minimum_to_bet(player), player.money
@@ -92,7 +99,7 @@ class Bet(AmountableAction):
         # choose action amount (example: bet, 50)
         while bet_min > amount or amount > bet_max:
             try:
-                amount = int(player.get_amount("How much [%d-%d]?" % (bet_min, bet_max)))
+                amount = int(player.get_amount(bet_min, bet_max))
             except ValueError:
                 print("Value has to be between 0 and ")
 
@@ -149,7 +156,7 @@ class BasePlayer(object):
     def interact(self, round_):
         raise NotImplementedError("Interact is not implemented on the Player's base class")
 
-    def get_amount(self, description):
+    def get_amount(self, _min, _max):
         raise NotImplementedError("get_amount is not implemented on the Player's base class")
 
     def is_folded(self, round_):
@@ -199,5 +206,5 @@ class HumanPlayer(BasePlayer):
             except IndexError:
                 pass
 
-    def get_amount(self, description):
-        return input(description)
+    def get_amount(self, _min, _max):
+        return input("How much [%d - %d]?" % (_min, _max))

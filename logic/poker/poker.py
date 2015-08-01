@@ -202,6 +202,8 @@ class Poker(object):
         self.small_blind = 1
         self.rounds = []
 
+        self.current_round = None
+
     def winner(self):
         """
         :return: game's winner, if one exists (None otherwise)
@@ -225,6 +227,7 @@ class Poker(object):
             for player in self.players:
                 LOGGER.info("%s" % player)
             round_ = Round(self.players, self.button_player, self.small_blind)
+            self.current_round = round_
             winnings = round_.play()
             self.rounds.append(round_)
 
