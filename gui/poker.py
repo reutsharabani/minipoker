@@ -10,30 +10,43 @@ import threading
 class Menu(tk.Frame):
     def __init__(self, master):
         super(Menu, self).__init__(master, height=500, width=200)
+
+        player_count_frame = tk.Frame(self)
         players_selection_var = tk.IntVar(self)
         players_selection_var.set(2)
-        players_menu = tk.OptionMenu(self, players_selection_var, 2, 3, 4, 5, 6, 7, 8)
+        players_menu = tk.OptionMenu(player_count_frame, players_selection_var, 2, 3, 4, 5, 6, 7, 8)
+        players_menu.pack(side=tk.RIGHT)
+        player_count_label = tk.Label(player_count_frame)
+        player_count_label['text'] = 'number of players'
+        player_count_label.pack(side=tk.LEFT)
+
+        starting_cash_frame = tk.Frame(self)
         cash_selection_var = tk.IntVar(self)
         cash_selection_var.set(100)
-        cash_menu = tk.OptionMenu(self, cash_selection_var, 100, 500, 1000)
+        cash_menu = tk.OptionMenu(starting_cash_frame, cash_selection_var, 100, 500, 1000)
+        cash_menu.pack(side=tk.RIGHT)
+        starting_cash_label = tk.Label(starting_cash_frame)
+        starting_cash_label['text'] = 'starting cash'
+        starting_cash_label.pack(side=tk.LEFT)
 
-        start_button = tk.Button(self, text='Start!',
+        start_button = tk.Button(self,
+                                 text='Start!',
                                  command=lambda: Game(master, self, players_selection_var.get(),
-                                                            cash_selection_var.get()))
+                                                      cash_selection_var.get()))
 
-        players_menu.pack()
-        cash_menu.pack()
+        # players_menu.pack()
+        # cash_menu.pack()
+        player_count_frame.pack()
+        starting_cash_frame.pack()
         start_button.pack()
 
 
 class GUIPlayer(tk.Button):
-
     def __init__(self, master, player):
         super(GUIPlayer, self).__init__(master, text=player.name, command=lambda: print(str(player)))
 
 
 class GUIHumanPlayer(players.BasePlayer):
-
     def __init__(self, name, money, gui_game):
         super(GUIHumanPlayer, self).__init__(name, money)
         self.gui_game = gui_game
@@ -48,7 +61,8 @@ class GUIHumanPlayer(players.BasePlayer):
         self.gui_game.logic_to_gui_queue.put(('get amount', (_min, _max)))
         return self.gui_game.gui_to_logic_queue.get()
 
-    def gui_get_amount(self, _min, _max):
+    @staticmethod
+    def gui_get_amount(_min, _max):
         while True:
             amount_selected_event = threading.Event()
             popup = tk.Toplevel()
@@ -75,7 +89,6 @@ class GUIHumanPlayer(players.BasePlayer):
 
 
 class Game(tk.Frame):
-
     def __init__(self, master, _menu, player_count, cash):
         super(Game, self).__init__(master, height=500, width=200)
 
@@ -122,7 +135,8 @@ class Game(tk.Frame):
             action_button.pack()
         self.players_list.pack()
 
-    def get_amount(self, _min, _max):
+    @staticmethod
+    def get_amount(_min, _max):
         print("get amount %d - %d" % (_min, _max))
 
     def check_queue(self):
@@ -145,8 +159,6 @@ class Game(tk.Frame):
         print("player %s" % str(_round.betting_player))
         self.players_to_buttons[_round.betting_player].configure(bg="#999")
         self.pack()
-
-
 
 
 root = tk.Tk()
