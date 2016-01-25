@@ -31,7 +31,7 @@ class Menu(tk.Frame):
 
         start_button = tk.Button(self,
                                  text='Start!',
-                                 command=lambda: Game(master, self, players_selection_var.get(),
+                                 command=lambda: self.make_game(master,  players_selection_var.get(),
                                                       cash_selection_var.get()))
 
         # players_menu.pack()
@@ -40,10 +40,27 @@ class Menu(tk.Frame):
         starting_cash_frame.pack()
         start_button.pack()
 
+    def make_game(self, master, player_count, cash):
+        self.pack_forget()
+        _players = [GUIHumanPlayer("Player %d" % i, cash, master) for i in range(player_count)]
+        return Game(master, ppoker.Poker(_players))
 
-class GUIPlayer(tk.Button):
+
+class GUIPlayer(tk.Frame):
     def __init__(self, master, player):
-        super(GUIPlayer, self).__init__(master, text=player.name, command=lambda: print(str(player)))
+        super(GUIPlayer, self).__init__(master)
+        self.player = player
+        self.name_label = tk.Label(self, text=player.name)
+        self.cash_label = tk.Label(self, text=player.money)
+        self.actions_frame = tk.Frame(self)
+
+        self.pack_all()
+
+    def pack_all(self):
+        self.pack_forget()
+        self.name_label.pack(side=tk.LEFT)
+        self.cash_label.pack(side=tk.RIGHT)
+        self.actions_frame.pack(side=tk.RIGHT)
 
 
 class GUIHumanPlayer(players.BasePlayer):
@@ -89,7 +106,7 @@ class GUIHumanPlayer(players.BasePlayer):
 
 
 class Game(tk.Frame):
-    def __init__(self, master, _menu, player_count, cash):
+    def __init__(self, master, logic):
         super(Game, self).__init__(master, height=500, width=200)
 
         self.game_to_gui_messages_dict = {
@@ -99,19 +116,16 @@ class Game(tk.Frame):
         self.gui_to_logic_queue = queue.Queue()
         self.logic_to_gui_queue = queue.Queue()
 
-        _menu.pack_forget()
-        _players = [GUIHumanPlayer("Player %d" % i, cash, self) for i in range(player_count)]
-        self.game_logic = ppoker.Poker(_players)
-
-        self.menu = _menu
+        self.game_logic = logic
 
         self.players_list = tk.Listbox(self)
-        self.players_to_buttons = {}
+        self.players_to_frames = {}
         for player in self.game_logic.players:
-            player_button = GUIPlayer(self.players_list, player)
-            self.players_list.insert(tk.END, player_button)
-            player_button.pack()
-            self.players_to_buttons[player] = player_button
+
+            player_frame = GUIPlayer(self.players_list, player)
+            self.players_list.insert(tk.END, player_frame)
+            player_frame.pack()
+            self.players_to_frames[player] = player_frame
 
         separator_label = tk.Label(self.players_list, text='options:')
 
