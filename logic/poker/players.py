@@ -1,12 +1,10 @@
-__author__ = 'reut'
-
 from itertools import combinations
 import os
 import logging
 from logic.poker.hands import Hand
 
-LOGGER = logging.getLogger('poker')
-LEVEL = logging.FATAL
+LOGGER = logging.getLogger('poker-players')
+LEVEL = logging.DEBUG
 stream_handler = logging.StreamHandler()
 LOGGER.setLevel(LEVEL)
 LOGGER.addHandler(stream_handler)
@@ -86,6 +84,7 @@ class Call(AmountableAction):
 
     def __str__(self):
         return "Player %s calls %d" % (self.player, self.amount)
+
 
 class Bet(AmountableAction):
 
@@ -177,8 +176,11 @@ class BasePlayer(object):
         best_hand = max(self.possible_hands(community_cards))
         return best_hand
 
-    def available_actions(self, round_):
-        return list(filter(lambda x: x.is_valid(self, round_), [Check, Call, Bet, Fold]))
+    def available_actions(self, _round):
+        LOGGER.debug("fetching available moves")
+        if not _round:
+            return []
+        return list(filter(lambda x: x.is_valid(self, _round), [Check, Call, Bet, Fold]))
 
     def choose_action_message(self, round_):
         return os.linesep.join([

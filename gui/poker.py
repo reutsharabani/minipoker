@@ -6,6 +6,15 @@ import random
 import queue
 import threading
 
+import logging
+
+LOGGER = logging.getLogger("poker-gui")
+sh = logging.StreamHandler()
+LEVEL = logging.DEBUG
+sh.setLevel(LEVEL)
+LOGGER.setLevel(LEVEL)
+LOGGER.addHandler(sh)
+
 
 class Menu(tk.Frame):
     def __init__(self, master):
@@ -31,8 +40,8 @@ class Menu(tk.Frame):
 
         start_button = tk.Button(self,
                                  text='Start!',
-                                 command=lambda: self.make_game(master,  players_selection_var.get(),
-                                                      cash_selection_var.get()))
+                                 command=lambda: self.make_game(master, players_selection_var.get(),
+                                                                cash_selection_var.get()))
 
         # players_menu.pack()
         # cash_menu.pack()
@@ -46,32 +55,55 @@ class Menu(tk.Frame):
         return Game(master, ppoker.Poker(_players))
 
 
+class ValidMove(tk.Button):
+    def __init__(self, master, player, move):
+        super(ValidMove, self).__init__(master, text=move.name)
+        self.player = player
+        self.move = move
+
+
 class GUIPlayer(tk.Frame):
-    def __init__(self, master, player):
+    def __init__(self, master, player, game_logic):
         super(GUIPlayer, self).__init__(master)
+        self.game_logic = game_logic
+        player.player_frame = self
         self.player = player
         self.name_label = tk.Label(self, text=player.name)
         self.cash_label = tk.Label(self, text=player.money)
+        self.valid_moves = [ValidMove(self, self.player, move) for move in
+                            self.player.available_actions(self.game_logic.current_round)]
         self.actions_frame = tk.Frame(self)
+        self.refresh()
 
-        self.pack_all()
-
-    def pack_all(self):
+    def refresh(self):
         self.pack_forget()
         self.name_label.pack(side=tk.LEFT)
         self.cash_label.pack(side=tk.RIGHT)
         self.actions_frame.pack(side=tk.RIGHT)
+        self.valid_moves = [ValidMove(self, self.player, move) for move in
+                            self.player.available_actions(self.game_logic.current_round)]
+        LOGGER.debug("%s has %d moves", self.player.name, len(self.valid_moves))
+        for move in self.valid_moves:
+            LOGGER.debug("valid move: %s", move.name)
+            move.pack(side=tk.RIGHT)
 
 
 class GUIHumanPlayer(players.BasePlayer):
     def __init__(self, name, money, gui_game):
         super(GUIHumanPlayer, self).__init__(name, money)
         self.gui_game = gui_game
+        LOGGER.debug("%s interacting" % self.name)
+        self.queue = queue.Queue()
+        self.player_frame = None
 
     def interact(self, round_):
-        self.gui_game.update_gui(round_)
-        self.gui_game.logic_to_gui_queue.put(('interact', (self, self.available_actions(round_))))
-        return self.gui_game.gui_to_logic_queue.get()
+        self.gui_game.pack_forget()
+        self.player_frame.refresh()
+        self.gui_game.pack()
+        return self.queue.get()
+        # self.gui_game.update_gui(round_)
+        # self.gui_game.logic_to_gui_queue.put(('interact', (self, self.available_actions(round_))))
+        # return self.gui_game.gui_to_logic_queue.get()
 
     def get_amount(self, _min, _max):
         self.gui_game.update_gui(self)
@@ -117,12 +149,12 @@ class Game(tk.Frame):
         self.logic_to_gui_queue = queue.Queue()
 
         self.game_logic = logic
+        threading.Thread(target=self.game_logic.play)
 
         self.players_list = tk.Listbox(self)
         self.players_to_frames = {}
         for player in self.game_logic.players:
-
-            player_frame = GUIPlayer(self.players_list, player)
+            player_frame = GUIPlayer(self.players_list, player, self.game_logic)
             self.players_list.insert(tk.END, player_frame)
             player_frame.pack()
             self.players_to_frames[player] = player_frame
@@ -133,13 +165,6 @@ class Game(tk.Frame):
 
         self.players_list.pack()
         self.pack()
-
-        self.game_thread = threading.Thread(target=self.game_logic.play)
-        self.game_thread.start()
-
-        self.should_update = True
-        # start checking queue for game events
-        self.after(50, self.check_queue)
 
     def interact(self, player_button, available_actions):
         print("interact with %s (actions: %s)" % (player_button.name, str(available_actions)))
@@ -171,7 +196,7 @@ class Game(tk.Frame):
 
     def update_gui(self, _round):
         print("player %s" % str(_round.betting_player))
-        self.players_to_buttons[_round.betting_player].configure(bg="#999")
+        self.players_to_frames[_round.betting_player].configure(bg="#999")
         self.pack()
 
 

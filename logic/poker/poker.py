@@ -1,9 +1,13 @@
-__author__ = 'reut'
-
 from random import choice
 from logic.deck import *
 from collections import defaultdict
 from logic.poker.players import *
+
+LOGGER = logging.getLogger('poker-hands')
+LEVEL = logging.DEBUG
+stream_handler = logging.StreamHandler()
+LOGGER.setLevel(LEVEL)
+LOGGER.addHandler(stream_handler)
 
 
 class Pot(object):

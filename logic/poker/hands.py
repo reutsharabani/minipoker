@@ -1,10 +1,8 @@
-__author__ = 'reut'
-
 from collections import Counter
 import logging
 
-LOGGER = logging.getLogger('hands')
-LEVEL = logging.FATAL
+LOGGER = logging.getLogger('poker-hands')
+LEVEL = logging.DEBUG
 stream_handler = logging.StreamHandler()
 LOGGER.setLevel(LEVEL)
 LOGGER.addHandler(stream_handler)
