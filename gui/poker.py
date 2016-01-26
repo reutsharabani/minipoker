@@ -1,8 +1,6 @@
-__author__ = 'reut'
-
+from logic.poker.players import Action
 import tkinter as tk
-from logic.poker import poker as ppoker, players as pplayers, players
-import random
+from logic.poker import poker as ppoker, players
 import queue
 import threading
 
@@ -16,76 +14,78 @@ LOGGER.setLevel(LEVEL)
 LOGGER.addHandler(sh)
 
 
+class MESSAGES:
+    REFRESH = "refresh"
+
+
 class Menu(tk.Frame):
     def __init__(self, master):
         super(Menu, self).__init__(master, height=500, width=200)
-
-        player_count_frame = tk.Frame(self)
+        self.master = master
         players_selection_var = tk.IntVar(self)
         players_selection_var.set(2)
-        players_menu = tk.OptionMenu(player_count_frame, players_selection_var, 2, 3, 4, 5, 6, 7, 8)
-        players_menu.pack(side=tk.RIGHT)
-        player_count_label = tk.Label(player_count_frame)
+        players_menu = tk.OptionMenu(self, players_selection_var, 2, 3, 4, 5, 6, 7, 8)
+        player_count_label = tk.Label(self)
         player_count_label['text'] = 'number of players'
-        player_count_label.pack(side=tk.LEFT)
+        player_count_label.grid(row=0, column=0)
+        players_menu.grid(row=0, column=1)
 
-        starting_cash_frame = tk.Frame(self)
         cash_selection_var = tk.IntVar(self)
         cash_selection_var.set(100)
-        cash_menu = tk.OptionMenu(starting_cash_frame, cash_selection_var, 100, 500, 1000)
-        cash_menu.pack(side=tk.RIGHT)
-        starting_cash_label = tk.Label(starting_cash_frame)
+        cash_menu = tk.OptionMenu(self, cash_selection_var, 100, 500, 1000)
+        starting_cash_label = tk.Label(self)
         starting_cash_label['text'] = 'starting cash'
-        starting_cash_label.pack(side=tk.LEFT)
+        starting_cash_label.grid(row=1, column=0)
+        cash_menu.grid(row=1, column=1)
 
         start_button = tk.Button(self,
                                  text='Start!',
                                  command=lambda: self.make_game(master, players_selection_var.get(),
                                                                 cash_selection_var.get()))
+        start_button.grid(row=3, column=0)
 
-        # players_menu.pack()
-        # cash_menu.pack()
-        player_count_frame.pack()
-        starting_cash_frame.pack()
-        start_button.pack()
+        self.pack()
 
     def make_game(self, master, player_count, cash):
-        self.pack_forget()
+        for widget in self.grid_slaves():
+            widget.grid_forget()
         _players = [GUIHumanPlayer("Player %d" % i, cash, master) for i in range(player_count)]
-        return Game(master, ppoker.Poker(_players))
+        return Game(self, ppoker.Poker(_players))
 
 
-class ValidMove(tk.Button):
-    def __init__(self, master, player, move):
-        super(ValidMove, self).__init__(master, text=move.name)
+class ValidMove(tk.Frame):
+    # filler and parent to actual moves
+    def __init__(self, master, player):
+        super(ValidMove, self).__init__(master)
         self.player = player
-        self.move = move
+        self.widget = tk.Label(self, text="NA")
+
+    def set_label(self, text):
+        self.widget['text'] = text
 
 
 class GUIPlayer(tk.Frame):
-    def __init__(self, master, player, game_logic):
+    def __init__(self, master, player, moves):
         super(GUIPlayer, self).__init__(master)
-        self.game_logic = game_logic
         player.player_frame = self
         self.player = player
-        self.name_label = tk.Label(self, text=player.name)
-        self.cash_label = tk.Label(self, text=player.money)
-        self.valid_moves = [ValidMove(self, self.player, move) for move in
-                            self.player.available_actions(self.game_logic.current_round)]
-        self.actions_frame = tk.Frame(self)
-        self.refresh()
+        self.moves = moves
+        self.master = master
+        self.name_label = tk.Label(master, text=player.name)
+        self.cash_label = tk.Label(master, text=player.money)
+        self.name_label.grid(row=player.id, column=0)
+        self.cash_label.grid(row=player.id, column=1)
 
-    def refresh(self):
-        self.pack_forget()
-        self.name_label.pack(side=tk.LEFT)
-        self.cash_label.pack(side=tk.RIGHT)
-        self.actions_frame.pack(side=tk.RIGHT)
-        self.valid_moves = [ValidMove(self, self.player, move) for move in
-                            self.player.available_actions(self.game_logic.current_round)]
-        LOGGER.debug("%s has %d moves", self.player.name, len(self.valid_moves))
-        for move in self.valid_moves:
-            LOGGER.debug("valid move: %s", move.name)
-            move.pack(side=tk.RIGHT)
+        self.move_frames = {x.__class__: ValidMove(master, self.player) for x in
+                            Action.ALL_ACTIONS_F()}
+        for offset, move in enumerate(self.move_frames.values()):
+            move.grid(row=player.id, column=2 + offset)
+
+    def refresh_moves(self, moves):
+        LOGGER.debug("%s has %d moves", self.player.name, len(self.moves))
+        for move in moves:
+            move_frame = self.move_frames[move.__class__]
+            move_frame.set_label("test")
 
 
 class GUIHumanPlayer(players.BasePlayer):
@@ -95,15 +95,12 @@ class GUIHumanPlayer(players.BasePlayer):
         LOGGER.debug("%s interacting" % self.name)
         self.queue = queue.Queue()
         self.player_frame = None
+        self.gui = None
 
-    def interact(self, round_):
-        self.gui_game.pack_forget()
-        self.player_frame.refresh()
-        self.gui_game.pack()
+    def interact(self, _round):
+        LOGGER.debug("refreshing gui")
+        self.gui.queue_refresh(_round)
         return self.queue.get()
-        # self.gui_game.update_gui(round_)
-        # self.gui_game.logic_to_gui_queue.put(('interact', (self, self.available_actions(round_))))
-        # return self.gui_game.gui_to_logic_queue.get()
 
     def get_amount(self, _min, _max):
         self.gui_game.update_gui(self)
@@ -137,70 +134,61 @@ class GUIHumanPlayer(players.BasePlayer):
             return amount
 
 
-class Game(tk.Frame):
-    def __init__(self, master, logic):
-        super(Game, self).__init__(master, height=500, width=200)
+class Game(object):
+    def __init__(self, frame, logic):
 
-        self.game_to_gui_messages_dict = {
-            'interact': self.interact,
-            'get amount': self.get_amount
-        }
-        self.gui_to_logic_queue = queue.Queue()
-        self.logic_to_gui_queue = queue.Queue()
+        self.frame = frame
 
         self.game_logic = logic
-        threading.Thread(target=self.game_logic.play)
 
-        self.players_list = tk.Listbox(self)
-        self.players_to_frames = {}
         for player in self.game_logic.players:
-            player_frame = GUIPlayer(self.players_list, player, self.game_logic)
-            self.players_list.insert(tk.END, player_frame)
-            player_frame.pack()
-            self.players_to_frames[player] = player_frame
+            player.gui = self
 
-        separator_label = tk.Label(self.players_list, text='options:')
+        self.event_queue = queue.Queue()
 
-        self.players_list.insert(tk.END, separator_label)
+        self.player_frames = []
+        for player in self.game_logic.players:
+            player_frame = GUIPlayer(self.frame, player, [])
+            player_frame.grid(row=player.id)
+            self.player_frames.append(player_frame)
 
-        self.players_list.pack()
-        self.pack()
-
-    def interact(self, player_button, available_actions):
-        print("interact with %s (actions: %s)" % (player_button.name, str(available_actions)))
-        action_buttons = [tk.Button(self.players_list, text=type(action).name) for action in available_actions]
-        for action_button in action_buttons:
-            self.players_list.insert(action_button)
-            action_button.pack()
-        self.players_list.pack()
+        # start game only after gui initialized
+        self.game_thread = threading.Thread(target=self.game_logic.play)
+        self.game_thread.start()
+        self.frame.after(10, func=self.process_event_queue)
+        self.frame.pack()
 
     @staticmethod
     def get_amount(_min, _max):
         print("get amount %d - %d" % (_min, _max))
 
-    def check_queue(self):
-        print("checking queue")
-        if self.should_update:
-            self.update_gui(self.game_logic.current_round)
-            self.should_update = False
+    def queue_refresh(self, _round):
+        self.event_queue.put((MESSAGES.REFRESH, _round,))
 
+    def process_event_queue(self):
         try:
-            item, args = self.logic_to_gui_queue.get(timeout=1)
-            # react to game message
-            self.game_to_gui_messages_dict[item](*args)
-            self.should_update = True
-            print("got %s" % item)
-        except Exception as e:
-            print("no item in queue %s" % str(e))
-        self.after(50, self.check_queue)
-
-    def update_gui(self, _round):
-        print("player %s" % str(_round.betting_player))
-        self.players_to_frames[_round.betting_player].configure(bg="#999")
-        self.pack()
+            # LOGGER.debug("processing events") # too much output
+            message = self.event_queue.get(block=False)
+            if message[0] == MESSAGES.REFRESH:
+                _round = message[1]
+                for player_frame in self.player_frames:
+                    player = player_frame.player
+                    player_frame.moves = []
+                    if len(player_frame.moves) > 0:
+                        LOGGER.debug("Clearing: %s" % player.name)
+                        player_frame.moves = []
+                        player_frame.refresh_moves()
+                    if _round and player is _round.betting_player:
+                        LOGGER.debug("Populating: %s" % player.name)
+                        moves = player.available_actions(_round)
+                        LOGGER.debug("Adding %d moves to player: %s", len(moves), player.name)
+                        player_frame.refresh_moves(moves)
+            self.frame.pack()
+        except queue.Empty:
+            pass
+        self.frame.after(10, func=self.process_event_queue)
 
 
 root = tk.Tk()
 menu = Menu(root)
-menu.pack()
 root.mainloop()

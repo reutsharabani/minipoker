@@ -92,7 +92,6 @@ class Hand(object):
         # nothing identified, play using highest cards
         return HighCard(cards)
 
-
     @staticmethod
     def is_valid(cards):
         raise NotImplemented("is_valid not implemented for abstract hand!")

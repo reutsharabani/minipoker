@@ -225,6 +225,7 @@ class Poker(object):
             self.button_player = self.after(self.button_player)
 
     def play(self):
+        LOGGER.debug("Starting game")
         while self.winner() is None:
             LOGGER.info("Playing round #%d" % (len(self.rounds) + 1))
             LOGGER.info("Players are:")

@@ -12,6 +12,8 @@ LOGGER.addHandler(stream_handler)
 
 class Action(object):
 
+    ALL_ACTIONS_F = lambda: [Fold, Check, Call, Bet]
+
     def __init__(self, player, round_):
         self.player = player
         self.round = round_
@@ -72,6 +74,7 @@ class Check(Action):
 class Call(AmountableAction):
 
     name = "Call"
+
     def __init__(self, player, round_):
         super(Call, self).__init__(player, round_, round_.pot.amount_to_call(player))
 
@@ -119,7 +122,11 @@ class NotEnoughMoneyException(Exception):
 
 class BasePlayer(object):
 
+    ids = 0
+
     def __init__(self, name, starting_money):
+        self.id = BasePlayer.ids
+        BasePlayer.ids += 1
         self.name = name
         self.pocket = None
         self.money = starting_money
@@ -179,7 +186,9 @@ class BasePlayer(object):
     def available_actions(self, _round):
         LOGGER.debug("fetching available moves")
         if not _round:
+            LOGGER.debug("0 moves for false round")
             return []
+        LOGGER.debug("round is ok, fetching moves")
         return list(filter(lambda x: x.is_valid(self, _round), [Check, Call, Bet, Fold]))
 
     def choose_action_message(self, round_):
