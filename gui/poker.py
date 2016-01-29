@@ -55,13 +55,40 @@ class Menu(tk.Frame):
 
 class ValidMove(tk.Frame):
     # filler and parent to actual moves
-    def __init__(self, master, player):
+    def __init__(self, master, player, move):
         super(ValidMove, self).__init__(master)
         self.player = player
         self.widget = tk.Label(self, text="NA")
+        self.widget.grid(row=0, column=0)
 
     def set_label(self, text):
         self.widget['text'] = text
+
+
+def make_tk_objects_for_moves(moves, frame):
+    if not moves:
+        return [tk.Label(frame, text="No moves")]
+    return [tk.Button(frame, text=move.name) for move in sorted(moves, key=lambda x: x.name)]
+
+
+class CallButton(tk.Button):
+    def __init__(self, master):
+        super(CallButton, self).__init__(master, text="call NA")
+
+
+class CheckButton(tk.Button):
+    def __init__(self, master):
+        super(CheckButton, self).__init__(master, text="check NA")
+
+
+class BetButton(tk.Button):
+    def __init__(self, master):
+        super(BetButton, self).__init__(master, text="bet NA")
+
+
+class FoldButton(tk.Button):
+    def __init__(self, master):
+        super(FoldButton, self).__init__(master, text="fold NA")
 
 
 class GUIPlayer(tk.Frame):
@@ -75,17 +102,21 @@ class GUIPlayer(tk.Frame):
         self.cash_label = tk.Label(master, text=player.money)
         self.name_label.grid(row=player.id, column=0)
         self.cash_label.grid(row=player.id, column=1)
-
-        self.move_frames = {x.__class__: ValidMove(master, self.player) for x in
-                            Action.ALL_ACTIONS_F()}
-        for offset, move in enumerate(self.move_frames.values()):
-            move.grid(row=player.id, column=2 + offset)
+        self.move_buttons = {
+            "check": CheckButton(master),
+            "bet": BetButton(master),
+            "fold": FoldButton(master),
+            "Call": CallButton(master),
+        }
+        # place action buttons
+        for offset, move in enumerate(self.move_buttons.values()):
+            print("placing move %s at offset %d" % (move['text'], 2 + offset))
+            move.grid(row=self.player.id, column=2 + offset)
+        self.refresh_moves(())
 
     def refresh_moves(self, moves):
-        LOGGER.debug("%s has %d moves", self.player.name, len(self.moves))
-        for move in moves:
-            move_frame = self.move_frames[move.__class__]
-            move_frame.set_label("test")
+        for button in self.move_buttons.values():
+            button['state'] = 'disabled'
 
 
 class GUIHumanPlayer(players.BasePlayer):
