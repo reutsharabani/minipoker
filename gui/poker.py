@@ -185,7 +185,9 @@ class GUIPlayer(tk.Frame):
     def refresh(self, _round):
         if self.player.pocket:
             self.pocket1['text'] = self.player.pocket[0]
+            self.pocket1['fg'] = self.player.pocket[0].color()
             self.pocket2['text'] = self.player.pocket[1]
+            self.pocket2['fg'] = self.player.pocket[1].color()
         for move_button in self.move_buttons.values():
             move_button.refresh(self.player, _round)
         if _round:
@@ -295,6 +297,9 @@ class Game(object):
                     LOGGER.debug("refreshing community cards %s" % str(_round.community_cards))
                     for label, card in zip(self.community_cards, _round.community_cards + [''] * 5):
                         label['text'] = card
+                        if card:
+                            LOGGER.debug("setting color to: %s" % card.color())
+                            label['fg'] = card.color()
             self.frame.pack()
         except queue.Empty:
             pass
