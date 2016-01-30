@@ -3,11 +3,7 @@ from logic.deck import *
 from collections import defaultdict
 from logic.poker.players import *
 
-LOGGER = logging.getLogger('poker-hands')
-LEVEL = logging.DEBUG
-stream_handler = logging.StreamHandler()
-LOGGER.setLevel(LEVEL)
-LOGGER.addHandler(stream_handler)
+LOGGER = logging.getLogger('poker-main')
 
 
 class Pot(object):
@@ -114,6 +110,12 @@ class Round(object):
         self.betting_player = self.after(self.button_player)
         self.place_bets()
 
+    def final_betting(self):
+        if self.winner() is not None:
+            return
+        self.betting_player = self.after(self.button_player)
+        self.place_bets()
+
     def next_betting_player(self):
         start = self.betting_player
         candidate = self.after(start)
@@ -128,6 +130,8 @@ class Round(object):
     def place_bets(self):
         # when no betting players are left
         # self.betting_player will be set to None
+
+        # set player first_bet to True to indicate this player is yet to bet
         for player in self.active_players:
             player.first_bet = True
 
@@ -136,6 +140,8 @@ class Round(object):
             self.betting_player = self.next_betting_player()
 
         while self.betting_player is not None:
+            LOGGER.info("player %s is choosing an action", self.betting_player.name)
+            self.betting_player.first_bet = False
             action = self.betting_player.interact(self)
             LOGGER.info("%s chose Action: %s" % (self.betting_player.name, action.__class__.__name__))
             action.apply()
@@ -160,6 +166,7 @@ class Round(object):
         LOGGER.info("Playing first round (pre-river)")
         self.pre_river_betting()
         self.open_river_cards()
+        self.final_betting()
         LOGGER.info("Round winners:")
         for winner_ in self.get_round_winners():
             LOGGER.info("%s" % winner_)

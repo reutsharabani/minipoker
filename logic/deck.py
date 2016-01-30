@@ -1,5 +1,3 @@
-__author__ = 'reut'
-
 from random import shuffle
 
 SUITS = ["Hearts", "Diamonds", "Clubs", "Spades"]

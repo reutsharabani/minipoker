@@ -1,4 +1,3 @@
-from logic.poker.players import Action
 import tkinter as tk
 from logic.poker import poker as ppoker, players
 import queue
@@ -6,12 +5,12 @@ import threading
 
 import logging
 
+FORMAT = '%(name)s - %(message)s'
+logging.basicConfig(format=FORMAT, level=logging.DEBUG)
 LOGGER = logging.getLogger("poker-gui")
-sh = logging.StreamHandler()
-LEVEL = logging.DEBUG
-sh.setLevel(LEVEL)
-LOGGER.setLevel(LEVEL)
-LOGGER.addHandler(sh)
+
+event_queue = queue.Queue()
+gui_to_logic_queue = queue.Queue()
 
 
 class MESSAGES:
@@ -52,6 +51,7 @@ class Menu(tk.Frame):
         _players = [GUIHumanPlayer("Player %d" % i, cash, master) for i in range(player_count)]
         return Game(self, ppoker.Poker(_players))
 
+
 ENABLE = 'active'
 DISABLE = 'disabled'
 
@@ -59,6 +59,7 @@ DISABLE = 'disabled'
 class CallButton(tk.Button):
     def __init__(self, master):
         super(CallButton, self).__init__(master, text="call NA")
+        self.action = players.Call
 
     def disable(self):
         self['state'] = DISABLE
@@ -67,16 +68,18 @@ class CallButton(tk.Button):
         self['state'] = ENABLE
 
     def refresh(self, player, _round):
-        if not player or not _round:
+        if not player or not _round or not self.action.is_valid(player, _round):
             self.disable()
         else:
             self['text'] = 'Call %d' % _round.pot.amount_to_call(player)
+            self['command'] = lambda: player.queue.put(self.action(player, _round))
             self.enable()
 
 
 class CheckButton(tk.Button):
     def __init__(self, master):
         super(CheckButton, self).__init__(master, text="check NA")
+        self.action = players.Check
 
     def disable(self):
         self['state'] = DISABLE
@@ -85,10 +88,11 @@ class CheckButton(tk.Button):
         self['state'] = ENABLE
 
     def refresh(self, player, _round):
-        if not player or not _round:
+        if not player or not _round or not self.action.is_valid(player, _round):
             self.disable()
         else:
             self['text'] = 'Check'
+            self['command'] = lambda: player.queue.put(self.action(player, _round))
             self.enable()
 
 
@@ -97,6 +101,7 @@ class BetButton(tk.OptionMenu):
         self.bet_var = tk.StringVar(master)
         self.bet_var.set("Bet NA")
         super(BetButton, self).__init__(master, self.bet_var, "Bet NA")
+        self.action = players.Bet
 
     def disable(self):
         self['state'] = DISABLE
@@ -105,22 +110,31 @@ class BetButton(tk.OptionMenu):
         self['state'] = ENABLE
 
     def refresh(self, player, _round):
-        if not player or not _round:
+        self['menu'].delete(0, tk.END)
+        if not player or not _round or not self.action.is_valid(player, _round):
             self.disable()
         else:
             self.bet_var.set("Bet ...")
             minimum, maximum = _round.pot.minimum_to_bet(player), player.money
-            step = (maximum - minimum) // 10
+            step = max((maximum - minimum) // 10, 1)
             LOGGER.info("minimum: %d, maximum: %d, step: %d" % (minimum, maximum, step))
+
+            def bet(_amount):
+                return lambda: player.queue.put(players.Bet(player, _round, _amount))
+
+            # add 10 betting options
             for amount in range(minimum, maximum, step):
-                self['menu'].add_command(label="Bet %d" % amount, command=tk._setit(self.bet_var, amount))
-            self['menu'].add_command(label="All In! (%d)" % maximum, command=tk._setit(self.bet_var, maximum))
+                self['menu'].add_command(label="Bet %d" % amount,
+                                         command=bet(amount))
+            # add all-in option
+            self['menu'].add_command(label="All In! (%d)" % maximum, command=lambda: bet(maximum))
             self.enable()
 
 
 class FoldButton(tk.Button):
     def __init__(self, master):
         super(FoldButton, self).__init__(master, text="fold NA")
+        self.action = players.Fold
 
     def disable(self):
         self['state'] = DISABLE
@@ -129,10 +143,11 @@ class FoldButton(tk.Button):
         self['state'] = ENABLE
 
     def refresh(self, player, _round):
-        if not player or not _round:
+        if not player or not _round or not self.action.is_valid(player, _round):
             self.disable()
         else:
             self['text'] = 'Fold'
+            self['command'] = lambda: player.queue.put(self.action(player, _round))
             self.enable()
 
 
@@ -147,6 +162,15 @@ class GUIPlayer(tk.Frame):
         self.cash_label = tk.Label(master, text=player.money)
         self.name_label.grid(row=player.id, column=0)
         self.cash_label.grid(row=player.id, column=1)
+
+        self.pocket1 = tk.Label(master, text='na')
+        self.pocket2 = tk.Label(master, text='na')
+        self.pocket1.grid(row=self.player.id, column=2)
+        self.pocket2.grid(row=self.player.id, column=3)
+
+        self.pot = tk.Label(master, text='na')
+        self.pot.grid(row=self.player.id, column=4)
+
         self.move_buttons = {
             "check": CheckButton(master),
             "bet": BetButton(master),
@@ -155,12 +179,22 @@ class GUIPlayer(tk.Frame):
         }
         # place action buttons
         for offset, move in enumerate(self.move_buttons.values()):
-            move.grid(row=self.player.id, column=2 + offset)
-        self.refresh_moves(None)
+            move.grid(row=self.player.id, column=5 + offset)
+        self.refresh(None)
 
-    def refresh_moves(self, _round):
+    def refresh(self, _round):
+        if self.player.pocket:
+            self.pocket1['text'] = self.player.pocket[0]
+            self.pocket2['text'] = self.player.pocket[1]
         for move_button in self.move_buttons.values():
             move_button.refresh(self.player, _round)
+        if _round:
+            self.pot['text'] = _round.pot.player_bet(self.player)
+            self.cash_label['text'] = "%d" % self.player.money
+
+    def disable(self):
+        for move_button in self.move_buttons.values():
+            move_button['state'] = DISABLE
 
 
 class GUIHumanPlayer(players.BasePlayer):
@@ -174,13 +208,13 @@ class GUIHumanPlayer(players.BasePlayer):
 
     def interact(self, _round):
         LOGGER.debug("refreshing gui")
+        # refresh gui
         self.gui.queue_refresh(_round)
+        # get move
         return self.queue.get()
 
     def get_amount(self, _min, _max):
-        self.gui_game.update_gui(self)
-        self.gui_game.logic_to_gui_queue.put(('get amount', (_min, _max)))
-        return self.gui_game.gui_to_logic_queue.get()
+        self.queue.get()
 
     @staticmethod
     def gui_get_amount(_min, _max):
@@ -219,13 +253,17 @@ class Game(object):
         for player in self.game_logic.players:
             player.gui = self
 
-        self.event_queue = queue.Queue()
-
-        self.player_frames = []
+        self.player_frames = {}
         for player in self.game_logic.players:
             player_frame = GUIPlayer(self.frame, player, [])
             player_frame.grid(row=player.id)
-            self.player_frames.append(player_frame)
+            self.player_frames[player] = player_frame
+
+        tk.Label(self.frame, text="Community Cards:").grid(row=len(self.game_logic.players))
+
+        self.community_cards = [tk.Label(self.frame, text='') for _ in range(5)]
+        for offset, community_card in enumerate(self.community_cards):
+            community_card.grid(row=len(self.game_logic.players) + 1, column=offset)
 
         # start game only after gui initialized
         self.game_thread = threading.Thread(target=self.game_logic.play)
@@ -237,25 +275,26 @@ class Game(object):
     def get_amount(_min, _max):
         print("get amount %d - %d" % (_min, _max))
 
-    def queue_refresh(self, _round):
-        self.event_queue.put((MESSAGES.REFRESH, _round,))
+    @staticmethod
+    def queue_refresh(_round):
+        event_queue.put((MESSAGES.REFRESH, _round,))
 
     def process_event_queue(self):
         try:
             # LOGGER.debug("processing events") # too much output
-            message = self.event_queue.get(block=False)
+            message = event_queue.get(block=False)
             if message[0] == MESSAGES.REFRESH:
                 _round = message[1]
-                for player_frame in self.player_frames:
+                for player_frame in self.player_frames.values():
                     player = player_frame.player
-                    player_frame.moves = []
-                    if len(player_frame.moves) > 0:
-                        LOGGER.debug("Clearing: %s" % player.name)
-                        player_frame.moves = []
-                        player_frame.refresh_moves()
-                    if _round and player is _round.betting_player:
+                    if _round:
                         LOGGER.debug("Populating: %s" % player.name)
-                        player_frame.refresh_moves(_round)
+                        player_frame.refresh(_round)
+                    if player is not _round.betting_player:
+                        player_frame.disable()
+                    LOGGER.debug("refreshing community cards %s" % str(_round.community_cards))
+                    for label, card in zip(self.community_cards, _round.community_cards + [''] * 5):
+                        label['text'] = card
             self.frame.pack()
         except queue.Empty:
             pass

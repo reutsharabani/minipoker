@@ -4,10 +4,6 @@ import logging
 from logic.poker.hands import Hand
 
 LOGGER = logging.getLogger('poker-players')
-LEVEL = logging.DEBUG
-stream_handler = logging.StreamHandler()
-LOGGER.setLevel(LEVEL)
-LOGGER.addHandler(stream_handler)
 
 
 class Action(object):
@@ -93,17 +89,17 @@ class Bet(AmountableAction):
 
     name = "Bet"
 
-    def __init__(self, player, round_):
+    def __init__(self, player, round_, amount=None):
         # TODO: change bet_max to actual max with repect to round
         bet_min, bet_max = round_.pot.minimum_to_bet(player), player.money
         LOGGER.debug("Setting bet limits to %d-%d" % (bet_min, bet_max))
-        amount = 0
         # choose action amount (example: bet, 50)
-        while bet_min > amount or amount > bet_max:
+        while (amount is None) or (bet_min > amount or amount > bet_max):
             try:
                 amount = int(player.get_amount(bet_min, bet_max))
             except ValueError:
                 print("Value has to be between 0 and ")
+        LOGGER.debug("Player %s bet: %d" % (player.name, amount))
 
         super(Bet, self).__init__(player, round_, amount)
 
@@ -169,7 +165,7 @@ class BasePlayer(object):
         return round_.is_folded(self)
 
     def is_betting(self, round_):
-        return len(round_.active_players) > 1 and self.money > 0 and  self.first_bet or (
+        return len(round_.active_players) > 1 and self.money > 0 and self.first_bet or (
             not self.is_folded(round_) and round_.pot.amount_to_call(self) > 0)
 
     def possible_hands(self, community_cards):
@@ -204,7 +200,6 @@ class BasePlayer(object):
 class HumanPlayer(BasePlayer):
 
     def interact(self, round_):
-        self.first_bet = False
 
         action = None
         while action is None:

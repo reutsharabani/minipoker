@@ -2,10 +2,6 @@ from collections import Counter
 import logging
 
 LOGGER = logging.getLogger('poker-hands')
-LEVEL = logging.DEBUG
-stream_handler = logging.StreamHandler()
-LOGGER.setLevel(LEVEL)
-LOGGER.addHandler(stream_handler)
 
 
 class Card(object):
