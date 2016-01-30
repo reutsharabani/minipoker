@@ -127,7 +127,7 @@ class BetButton(tk.OptionMenu):
                 self['menu'].add_command(label="Bet %d" % amount,
                                          command=bet(amount))
             # add all-in option
-            self['menu'].add_command(label="All In! (%d)" % maximum, command=lambda: bet(maximum))
+            self['menu'].add_command(label="All In! (%d)" % maximum, command=bet(maximum))
             self.enable()
 
 
@@ -158,18 +158,19 @@ class GUIPlayer(tk.Frame):
         self.player = player
         self.moves = moves
         self.master = master
+        self.row = player.id + 1
         self.name_label = tk.Label(master, text=player.name)
         self.cash_label = tk.Label(master, text=player.money)
-        self.name_label.grid(row=player.id, column=0)
-        self.cash_label.grid(row=player.id, column=1)
+        self.name_label.grid(row=self.row, column=0)
+        self.cash_label.grid(row=self.row, column=1)
 
         self.pocket1 = tk.Label(master, text='na')
         self.pocket2 = tk.Label(master, text='na')
-        self.pocket1.grid(row=self.player.id, column=2)
-        self.pocket2.grid(row=self.player.id, column=3)
+        self.pocket1.grid(row=self.row, column=2)
+        self.pocket2.grid(row=self.row, column=3)
 
         self.pot = tk.Label(master, text='na')
-        self.pot.grid(row=self.player.id, column=4)
+        self.pot.grid(row=self.row, column=4)
 
         self.move_buttons = {
             "check": CheckButton(master),
@@ -179,7 +180,7 @@ class GUIPlayer(tk.Frame):
         }
         # place action buttons
         for offset, move in enumerate(self.move_buttons.values()):
-            move.grid(row=self.player.id, column=5 + offset)
+            move.grid(row=self.row, column=5 + offset)
         self.refresh(None)
 
     def refresh(self, _round):
@@ -210,8 +211,10 @@ class GUIHumanPlayer(players.BasePlayer):
 
     def interact(self, _round):
         LOGGER.debug("refreshing gui")
+
         # refresh gui
-        self.gui.queue_refresh(_round)
+        event_queue.put((MESSAGES.REFRESH, _round,))
+
         # get move
         return self.queue.get()
 
@@ -255,17 +258,24 @@ class Game(object):
         for player in self.game_logic.players:
             player.gui = self
 
+        tk.Label(self.frame, text="Player").grid(row=0, column=0)
+        tk.Label(self.frame, text="Money").grid(row=0, column=1)
+        tk.Label(self.frame, text="Card 1").grid(row=0, column=2)
+        tk.Label(self.frame, text="Card 2").grid(row=0, column=3)
+        tk.Label(self.frame, text="Invested").grid(row=0, column=4)
+        tk.Label(self.frame, text="Invested").grid(row=0, column=4)
+
         self.player_frames = {}
         for player in self.game_logic.players:
             player_frame = GUIPlayer(self.frame, player, [])
-            player_frame.grid(row=player.id)
+            player_frame.grid(row=player.id + 1)
             self.player_frames[player] = player_frame
 
-        tk.Label(self.frame, text="Community Cards:").grid(row=len(self.game_logic.players))
+        tk.Label(self.frame, text="Community Cards:").grid(row=len(self.game_logic.players) + 1)
 
         self.community_cards = [tk.Label(self.frame, text='') for _ in range(5)]
         for offset, community_card in enumerate(self.community_cards):
-            community_card.grid(row=len(self.game_logic.players) + 1, column=offset)
+            community_card.grid(row=len(self.game_logic.players) + 2, column=offset)
 
         # start game only after gui initialized
         self.game_thread = threading.Thread(target=self.game_logic.play)
@@ -277,11 +287,9 @@ class Game(object):
     def get_amount(_min, _max):
         print("get amount %d - %d" % (_min, _max))
 
-    @staticmethod
-    def queue_refresh(_round):
-        event_queue.put((MESSAGES.REFRESH, _round,))
-
     def process_event_queue(self):
+        # this is needed to let UI thread update widgets
+        # (tkinter does not support multi threading)
         try:
             # LOGGER.debug("processing events") # too much output
             message = event_queue.get(block=False)
