@@ -52,43 +52,88 @@ class Menu(tk.Frame):
         _players = [GUIHumanPlayer("Player %d" % i, cash, master) for i in range(player_count)]
         return Game(self, ppoker.Poker(_players))
 
-
-class ValidMove(tk.Frame):
-    # filler and parent to actual moves
-    def __init__(self, master, player, move):
-        super(ValidMove, self).__init__(master)
-        self.player = player
-        self.widget = tk.Label(self, text="NA")
-        self.widget.grid(row=0, column=0)
-
-    def set_label(self, text):
-        self.widget['text'] = text
-
-
-def make_tk_objects_for_moves(moves, frame):
-    if not moves:
-        return [tk.Label(frame, text="No moves")]
-    return [tk.Button(frame, text=move.name) for move in sorted(moves, key=lambda x: x.name)]
+ENABLE = 'active'
+DISABLE = 'disabled'
 
 
 class CallButton(tk.Button):
     def __init__(self, master):
         super(CallButton, self).__init__(master, text="call NA")
 
+    def disable(self):
+        self['state'] = DISABLE
+
+    def enable(self):
+        self['state'] = ENABLE
+
+    def refresh(self, player, _round):
+        if not player or not _round:
+            self.disable()
+        else:
+            self['text'] = 'Call %d' % _round.pot.amount_to_call(player)
+            self.enable()
+
 
 class CheckButton(tk.Button):
     def __init__(self, master):
         super(CheckButton, self).__init__(master, text="check NA")
 
+    def disable(self):
+        self['state'] = DISABLE
 
-class BetButton(tk.Button):
+    def enable(self):
+        self['state'] = ENABLE
+
+    def refresh(self, player, _round):
+        if not player or not _round:
+            self.disable()
+        else:
+            self['text'] = 'Check'
+            self.enable()
+
+
+class BetButton(tk.OptionMenu):
     def __init__(self, master):
-        super(BetButton, self).__init__(master, text="bet NA")
+        self.bet_var = tk.StringVar(master)
+        self.bet_var.set("Bet NA")
+        super(BetButton, self).__init__(master, self.bet_var, "Bet NA")
+
+    def disable(self):
+        self['state'] = DISABLE
+
+    def enable(self):
+        self['state'] = ENABLE
+
+    def refresh(self, player, _round):
+        if not player or not _round:
+            self.disable()
+        else:
+            self.bet_var.set("Bet ...")
+            minimum, maximum = _round.pot.minimum_to_bet(player), player.money
+            step = (maximum - minimum) // 10
+            LOGGER.info("minimum: %d, maximum: %d, step: %d" % (minimum, maximum, step))
+            for amount in range(minimum, maximum, step):
+                self['menu'].add_command(label="Bet %d" % amount, command=tk._setit(self.bet_var, amount))
+            self['menu'].add_command(label="All In! (%d)" % maximum, command=tk._setit(self.bet_var, maximum))
+            self.enable()
 
 
 class FoldButton(tk.Button):
     def __init__(self, master):
         super(FoldButton, self).__init__(master, text="fold NA")
+
+    def disable(self):
+        self['state'] = DISABLE
+
+    def enable(self):
+        self['state'] = ENABLE
+
+    def refresh(self, player, _round):
+        if not player or not _round:
+            self.disable()
+        else:
+            self['text'] = 'Fold'
+            self.enable()
 
 
 class GUIPlayer(tk.Frame):
@@ -106,17 +151,16 @@ class GUIPlayer(tk.Frame):
             "check": CheckButton(master),
             "bet": BetButton(master),
             "fold": FoldButton(master),
-            "Call": CallButton(master),
+            "call": CallButton(master),
         }
         # place action buttons
         for offset, move in enumerate(self.move_buttons.values()):
-            print("placing move %s at offset %d" % (move['text'], 2 + offset))
             move.grid(row=self.player.id, column=2 + offset)
-        self.refresh_moves(())
+        self.refresh_moves(None)
 
-    def refresh_moves(self, moves):
-        for button in self.move_buttons.values():
-            button['state'] = 'disabled'
+    def refresh_moves(self, _round):
+        for move_button in self.move_buttons.values():
+            move_button.refresh(self.player, _round)
 
 
 class GUIHumanPlayer(players.BasePlayer):
@@ -211,9 +255,7 @@ class Game(object):
                         player_frame.refresh_moves()
                     if _round and player is _round.betting_player:
                         LOGGER.debug("Populating: %s" % player.name)
-                        moves = player.available_actions(_round)
-                        LOGGER.debug("Adding %d moves to player: %s", len(moves), player.name)
-                        player_frame.refresh_moves(moves)
+                        player_frame.refresh_moves(_round)
             self.frame.pack()
         except queue.Empty:
             pass
