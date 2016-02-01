@@ -1,9 +1,9 @@
 import tkinter as tk
-from logic.poker import poker as ppoker, players
 import queue
 import threading
-
 import logging
+
+from minipoker.logic import poker as ppoker, players
 
 FORMAT = '%(name)s - %(message)s'
 logging.basicConfig(format=FORMAT, level=logging.DEBUG)
@@ -258,12 +258,8 @@ class Game(object):
         for player in self.game_logic.players:
             player.gui = self
 
-        tk.Label(self.frame, text="Player").grid(row=0, column=0)
-        tk.Label(self.frame, text="Money").grid(row=0, column=1)
-        tk.Label(self.frame, text="Card 1").grid(row=0, column=2)
-        tk.Label(self.frame, text="Card 2").grid(row=0, column=3)
-        tk.Label(self.frame, text="Invested").grid(row=0, column=4)
-        tk.Label(self.frame, text="Invested").grid(row=0, column=4)
+        for offset, title in enumerate("Player,Money,Card 1,Card2,Invested".split(",")):
+            tk.Label(self.frame, text=title).grid(row=0, column=offset)
 
         self.player_frames = {}
         for player in self.game_logic.players:
@@ -314,6 +310,7 @@ class Game(object):
         self.frame.after(10, func=self.process_event_queue)
 
 
-root = tk.Tk()
-menu = Menu(root)
-root.mainloop()
+def main():
+    root = tk.Tk()
+    Menu(root)
+    root.mainloop()
