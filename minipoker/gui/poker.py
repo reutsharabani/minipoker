@@ -13,6 +13,7 @@ event_queue = queue.Queue()
 gui_to_logic_queue = queue.Queue()
 
 
+
 class MESSAGES:
     REFRESH = "refresh"
 
@@ -20,35 +21,51 @@ class MESSAGES:
 class Menu(tk.Frame):
     def __init__(self, master):
         super(Menu, self).__init__(master, height=500, width=200)
-        self.master = master
-        players_selection_var = tk.IntVar(self)
-        players_selection_var.set(2)
-        players_menu = tk.OptionMenu(self, players_selection_var, 2, 3, 4, 5, 6, 7, 8)
-        player_count_label = tk.Label(self)
-        player_count_label['text'] = 'number of players'
-        player_count_label.grid(row=0, column=0)
-        players_menu.grid(row=0, column=1)
 
-        cash_selection_var = tk.IntVar(self)
-        cash_selection_var.set(100)
-        cash_menu = tk.OptionMenu(self, cash_selection_var, 100, 500, 1000)
-        starting_cash_label = tk.Label(self)
-        starting_cash_label['text'] = 'starting cash'
-        starting_cash_label.grid(row=1, column=0)
-        cash_menu.grid(row=1, column=1)
-
+        # hold player widgets
+        self.players = []
+        tk.Label(self, text="Players").grid(row=0)
+        self.players_frame = tk.Frame(self, bd=2, relief=tk.SUNKEN)
+        for idx, title in enumerate(["Name", "Money", "Type"]):
+            tk.Label(self.players_frame, text=title).grid(row=0, column=idx)
+        self.add_player_button = tk.Button(self.players_frame, text="Add player", command=self.add_player)
+        self.add_player_button.grid(row=1, columnspan=3)
+        self.player_count = 0
+        self.players_frame.grid(row=1)
         start_button = tk.Button(self,
                                  text='Start!',
-                                 command=lambda: self.make_game(master, players_selection_var.get(),
-                                                                cash_selection_var.get()))
-        start_button.grid(row=3, column=0, columnspan=2)
-
+                                 command=lambda: self.make_game())
+        start_button.grid(row=3, column=0)
         self.pack()
 
-    def make_game(self, master, player_count, cash):
+    def make_players(self):
+        pass
+
+    def add_player(self):
+        self.player_count += 1
+        row = self.player_count
+        self.add_player_button.grid_forget()
+
+        _name_widget = tk.Entry(self.players_frame,
+                                textvariable=tk.StringVar(self.players_frame, "Player %d" % self.player_count))
+        _name_widget.grid(row=row)
+        _cash_var = tk.IntVar(self.players_frame, 1000)
+        _cash_widget = tk.Entry(self.players_frame, textvariable=_cash_var)
+        _cash_widget.grid(row=row, column=1)
+        _type_var = tk.StringVar(self.players_frame, players.HumanPlayer.NAME)
+        _type_widget = tk.OptionMenu(self.players_frame, _type_var, *[k for k in PLAYER_TYPES.keys()])
+        _type_widget.grid(row=row, column=2)
+
+        # add to players
+        self.players.append((_name_widget, _cash_var, _type_var))
+        self.add_player_button.grid(row=row + 1, columnspan=3)
+
+    def make_game(self):
         for widget in self.grid_slaves():
             widget.grid_forget()
-        _players = [GUIHumanPlayer("Player %d" % i, cash, master) for i in range(player_count)]
+        _players = [PLAYER_TYPES[_type_widget.get()](_name_widget.get(), _cash_widget.get()) for
+                    _name_widget, _cash_widget, _type_widget in self.players]
+        LOGGER.debug("Starting game with %d players", len(_players))
         return Game(self, ppoker.Poker(_players))
 
 
@@ -201,9 +218,11 @@ class GUIPlayer(tk.Frame):
 
 
 class GUIHumanPlayer(players.BasePlayer):
-    def __init__(self, name, money, gui_game):
+
+    NAME = 'Human'
+
+    def __init__(self, name, money):
         super(GUIHumanPlayer, self).__init__(name, money)
-        self.gui_game = gui_game
         LOGGER.debug("%s interacting" % self.name)
         self.queue = queue.Queue()
         self.player_frame = None
@@ -308,6 +327,8 @@ class Game(object):
         except queue.Empty:
             pass
         self.frame.after(10, func=self.process_event_queue)
+
+PLAYER_TYPES = {c.NAME: c for c in [GUIHumanPlayer, players.RandomPlayer]}
 
 
 def main():

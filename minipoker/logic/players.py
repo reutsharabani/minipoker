@@ -200,6 +200,8 @@ class BasePlayer(object):
 
 class HumanPlayer(BasePlayer):
 
+    NAME = "Human"
+
     def interact(self, round_):
 
         action = None
@@ -218,8 +220,11 @@ class HumanPlayer(BasePlayer):
 
 
 class RandomPlayer(BasePlayer):
+
+    NAME = "Random"
+
     def interact(self, round_):
-        return random.choice(self.available_actions)(self, round_)
+        return random.choice(self.available_actions(round_))(self, round_)
 
     def get_amount(self, _min, _max):
         return random.randint(_min, _max)
