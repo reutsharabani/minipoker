@@ -21,7 +21,7 @@ setup(
         'Programming Language :: Python :: 3'
     ],
     # What does your project relate to?
-    keywords='poker game',
+    keywords='poker card game'.split(),
     # You can just specify the packages manually here if your project is
     #  simple. Or you can use find_packages().
     packages=find_packages(exclude=['contrib', 'docs', 'tests*']),

@@ -3,6 +3,8 @@ import os
 import logging
 
 from minipoker.logic.hands import Hand
+import random
+
 
 LOGGER = logging.getLogger('poker-players')
 
@@ -213,3 +215,11 @@ class HumanPlayer(BasePlayer):
 
     def get_amount(self, _min, _max):
         return input("How much [%d - %d]?" % (_min, _max))
+
+
+class RandomPlayer(BasePlayer):
+    def interact(self, round_):
+        return random.choice(self.available_actions)(self, round_)
+
+    def get_amount(self, _min, _max):
+        return random.randint(_min, _max)

@@ -41,7 +41,7 @@ class Menu(tk.Frame):
                                  text='Start!',
                                  command=lambda: self.make_game(master, players_selection_var.get(),
                                                                 cash_selection_var.get()))
-        start_button.grid(row=3, column=0)
+        start_button.grid(row=3, column=0, columnspan=2)
 
         self.pack()
 
@@ -267,7 +267,7 @@ class Game(object):
             player_frame.grid(row=player.id + 1)
             self.player_frames[player] = player_frame
 
-        tk.Label(self.frame, text="Community Cards:").grid(row=len(self.game_logic.players) + 1)
+        tk.Label(self.frame, text="Community Cards:").grid(row=len(self.game_logic.players) + 1, columnspan=5)
 
         self.community_cards = [tk.Label(self.frame, text='') for _ in range(5)]
         for offset, community_card in enumerate(self.community_cards):
