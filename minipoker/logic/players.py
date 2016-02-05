@@ -112,6 +112,9 @@ class Bet(AmountableAction):
         self.player.money -= self.amount
         self.round.bet(self.player, self.amount)
 
+    def __str__(self):
+        return "Player %s bets %d" % (self.player.name, self.amount)
+
 
 class NotEnoughMoneyException(Exception):
     pass

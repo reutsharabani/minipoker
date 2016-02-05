@@ -57,6 +57,7 @@ class Round(object):
         self.community_cards = []
         self.button_player = button_player
         self.pot = Pot(self.small_blind)
+        self.action_log = []
         LOGGER.info("Dealing cards")
         for player in self.players:
             player.set_pocket(self.deck.draw(), self.deck.draw())
@@ -142,6 +143,7 @@ class Round(object):
             self.betting_player.first_bet = False
             action = self.betting_player.interact(self)
             LOGGER.info("%s chose Action: %s" % (self.betting_player.name, action.__class__.__name__))
+            self.action_log.append(action)
             action.apply()
             self.betting_player = self.next_betting_player()
 
@@ -210,7 +212,6 @@ class Poker(object):
         self.button_player = choice(self.players)
         self.small_blind = 1
         self.rounds = []
-
         self.current_round = None
 
     def winner(self):

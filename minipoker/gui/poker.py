@@ -2,6 +2,7 @@ import tkinter as tk
 import queue
 import threading
 import logging
+import os
 
 from minipoker.logic import poker as ppoker, players
 
@@ -11,7 +12,6 @@ LOGGER = logging.getLogger("poker-gui")
 
 event_queue = queue.Queue()
 gui_to_logic_queue = queue.Queue()
-
 
 
 class MESSAGES:
@@ -218,7 +218,6 @@ class GUIPlayer(tk.Frame):
 
 
 class GUIHumanPlayer(players.BasePlayer):
-
     NAME = 'Human'
 
     def __init__(self, name, money):
@@ -292,6 +291,10 @@ class Game(object):
         for offset, community_card in enumerate(self.community_cards):
             community_card.grid(row=len(self.game_logic.players) + 2, column=offset)
 
+        self.log = tk.Text(self.frame)
+        self.log.grid(row=len(self.game_logic.players) + 3, columnspan=5)
+        self.log.insert(tk.END, "STARTING GAME..." + os.linesep)
+
         # start game only after gui initialized
         self.game_thread = threading.Thread(target=self.game_logic.play)
         self.game_thread.start()
@@ -323,10 +326,17 @@ class Game(object):
                         if card:
                             LOGGER.debug("setting color to: %s" % card.color())
                             label['fg'] = card.color()
+                self.refresh_log()
             self.frame.pack()
         except queue.Empty:
             pass
         self.frame.after(10, func=self.process_event_queue)
+
+    def refresh_log(self):
+        self.log.delete(1.0, tk.END)
+        self.log.insert(tk.END,
+                        os.linesep.join(str(action) for action in reversed(self.game_logic.current_round.action_log)))
+
 
 PLAYER_TYPES = {c.NAME: c for c in [GUIHumanPlayer, players.RandomPlayer]}
 
