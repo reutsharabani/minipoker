@@ -9,4 +9,8 @@ To run:
 
     import minipoker
 
-Sample:
+# Samples:
+
+<img src="https://github.com/reutsharabani/minipoker/blob/master/minipoker/sample-pics/p1.png"/>
+
+<img src="https://github.com/reutsharabani/minipoker/blob/master/minipoker/sample-pics/p2.png"/>
