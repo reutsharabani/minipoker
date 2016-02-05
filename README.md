@@ -10,5 +10,3 @@ To run:
     import minipoker
 
 Sample:
-
-<a href="http://tinypic.com?ref=oizrck" target="_blank"><img src="http://i64.tinypic.com/oizrck.png" border="0" alt="Image and video hosting by TinyPic"></a>

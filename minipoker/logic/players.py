@@ -227,7 +227,7 @@ class HumanPlayer(BasePlayer):
 
 class RandomPlayer(BasePlayer):
 
-    NAME = "Random"
+    NAME = "Random Action"
 
     def interact(self, round_):
         return random.choice(self.available_actions(round_))(self, round_)
