@@ -1,2 +1,2 @@
-from minipoker.gui import poker
-poker.main()
+from minipoker.gui import game
+game.main()

@@ -93,8 +93,11 @@ class Hand(object):
     def is_valid(cards):
         raise NotImplemented("is_valid not implemented for abstract hand!")
 
-    def __str__(self):
+    def __repr__(self):
         return "%s - %s" % (self.__class__, ','.join([str(card.value) + card.suit[0] for card in self.cards]))
+
+    def __str__(self):
+        return ", ".join(str(c) for c in self.cards)
 
 
 class StraightFlush(Hand):

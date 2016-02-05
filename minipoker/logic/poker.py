@@ -2,8 +2,17 @@ from random import choice
 from collections import defaultdict
 import logging
 from minipoker.logic.deck import Deck
+import queue
 
 LOGGER = logging.getLogger('poker-main')
+
+
+class Events:
+    PLAYER_BETTING = "Player betting"
+    GAME_STARTED = "Game started"
+    CARD_OPENED = "Card opened"
+    ROUND_FINISHED = "Round finished"
+    PLAYER_BET = "Player bet"
 
 
 class Pot(object):
@@ -47,7 +56,8 @@ class Pot(object):
 
 
 class Round(object):
-    def __init__(self, players, button_player, small_blind):
+    def __init__(self, players, button_player, small_blind, event_queue):
+        self.event_queue = event_queue
         self.players = players[:]
         self.folded_players = []
         self.small_blind = small_blind
@@ -63,6 +73,7 @@ class Round(object):
             player.set_pocket(self.deck.draw(), self.deck.draw())
 
     def bet(self, player, amount):
+        self.event_queue.put(Events.PLAYER_BET)
         self.pot.bet(player, amount)
 
     def is_folded(self, player):
@@ -141,6 +152,7 @@ class Round(object):
         while self.betting_player is not None:
             LOGGER.info("player %s is choosing an action", self.betting_player.name)
             self.betting_player.first_bet = False
+            self.event_queue.put(Events.PLAYER_BETTING)
             action = self.betting_player.interact(self)
             LOGGER.info("%s chose Action: %s" % (self.betting_player.name, action.__class__.__name__))
             self.action_log.append(action)
@@ -173,6 +185,7 @@ class Round(object):
         return dict(self.finish_round())
 
     def open_card(self):
+        self.event_queue.put(Events.CARD_OPENED)
         self.community_cards.append(self.deck.draw())
 
     def open_flop_cards(self):
@@ -187,6 +200,7 @@ class Round(object):
         self.open_card()
 
     def finish_round(self):
+        self.event_queue.put(Events.ROUND_FINISHED)
         for winner_ in self.get_round_winners():
             winnings = self.pot.take_pot_for_player(winner_)
             LOGGER.info("Giving winnings (%d) to player: %s [%s]" % (
@@ -212,7 +226,9 @@ class Poker(object):
         self.button_player = choice(self.players)
         self.small_blind = 1
         self.rounds = []
+        self.log = ["STARTING GAME..."]
         self.current_round = None
+        self.event_queue = queue.Queue()
 
     def winner(self):
         """
@@ -233,17 +249,20 @@ class Poker(object):
     def play(self):
         LOGGER.debug("Starting game")
         while self.winner() is None:
+            self.event_queue.put(Events.GAME_STARTED)
             LOGGER.info("Playing round #%d" % (len(self.rounds) + 1))
             LOGGER.info("Players are:")
             for player in self.players:
                 LOGGER.info("%s" % player)
-            round_ = Round(self.players, self.button_player, self.small_blind)
+            round_ = Round(self.players, self.button_player, self.small_blind, self.event_queue)
             self.current_round = round_
             winnings = round_.play()
             self.rounds.append(round_)
 
             for player, winning in winnings.items():
-                print("%s won %d" % (player, winning))
+                hand = player.best_hand(round_.community_cards)
+                self.log.append("round %d - %s won %d with %s [%s]" % (
+                    len(self.rounds) + 1, player.name, winning, hand.__class__.__name__, str(hand)))
             # move button (before possibly removing button player)
             self.advance_button_player()
 
@@ -253,4 +272,9 @@ class Poker(object):
                     LOGGER.info("Player %s finished the game" % str(player))
                     self.finished_players.append(player)
                     self.players.remove(player)
+
+        winner = self.winner()
+        self.log.append("%s won" % winner.name)
+        for player in self.players:
+            player.on_game_ended(self)
         return self.winner()

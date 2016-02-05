@@ -1,8 +1,10 @@
 import tkinter as tk
+from tkinter.font import Font
 import queue
 import threading
 import logging
 import os
+from minipoker.logic.poker import Events
 
 from minipoker.logic import poker as ppoker, players
 
@@ -211,6 +213,8 @@ class GUIPlayer(tk.Frame):
         if _round:
             self.pot['text'] = _round.pot.player_bet(self.player)
             self.cash_label['text'] = "%d" % self.player.money
+            if self.player is not _round.betting_player:
+                self.disable()
 
     def disable(self):
         for move_button in self.move_buttons.values():
@@ -228,10 +232,7 @@ class GUIHumanPlayer(players.BasePlayer):
         self.gui = None
 
     def interact(self, _round):
-        LOGGER.debug("refreshing gui")
-
-        # refresh gui
-        event_queue.put((MESSAGES.REFRESH, _round,))
+        LOGGER.debug("refreshing gui before %s's action", self.name)
 
         # get move
         return self.queue.get()
@@ -267,6 +268,8 @@ class GUIHumanPlayer(players.BasePlayer):
 
 
 class Game(object):
+
+
     def __init__(self, frame, logic):
 
         self.frame = frame
@@ -285,15 +288,18 @@ class Game(object):
             player_frame.grid(row=player.id + 1)
             self.player_frames[player] = player_frame
 
-        tk.Label(self.frame, text="Community Cards:").grid(row=len(self.game_logic.players) + 1, columnspan=5)
+        tk.Label(self.frame, text="Community Cards:").grid(row=len(self.game_logic.players) + 1, columnspan=9)
 
         self.community_cards = [tk.Label(self.frame, text='') for _ in range(5)]
         for offset, community_card in enumerate(self.community_cards):
             community_card.grid(row=len(self.game_logic.players) + 2, column=offset)
 
-        self.log = tk.Text(self.frame)
-        self.log.grid(row=len(self.game_logic.players) + 3, columnspan=5)
-        self.log.insert(tk.END, "STARTING GAME..." + os.linesep)
+        self.round_log = tk.Text(self.frame, height=10)
+        self.round_log.grid(row=len(self.game_logic.players) + 3, columnspan=9)
+
+        self.game_log = tk.Text(self.frame, height=10)
+        # self.game_log.tag_configure("red", foreground="red")
+        self.game_log.grid(row=len(self.game_logic.players) + 4, columnspan=9)
 
         # start game only after gui initialized
         self.game_thread = threading.Thread(target=self.game_logic.play)
@@ -310,32 +316,35 @@ class Game(object):
         # (tkinter does not support multi threading)
         try:
             # LOGGER.debug("processing events") # too much output
-            message = event_queue.get(block=False)
-            if message[0] == MESSAGES.REFRESH:
-                _round = message[1]
+            message = self.game_logic.event_queue.get(block=False)
+
+            if message:
+                LOGGER.debug("Got event: %s" % str(message))
+                _round = self.game_logic.current_round
                 for player_frame in self.player_frames.values():
                     player = player_frame.player
                     if _round:
                         LOGGER.debug("Populating: %s" % player.name)
                         player_frame.refresh(_round)
-                    if player is not _round.betting_player:
-                        player_frame.disable()
                     LOGGER.debug("refreshing community cards %s" % str(_round.community_cards))
                     for label, card in zip(self.community_cards, _round.community_cards + [''] * 5):
                         label['text'] = card
                         if card:
                             LOGGER.debug("setting color to: %s" % card.color())
                             label['fg'] = card.color()
-                self.refresh_log()
+                self.refresh_logs()
             self.frame.pack()
         except queue.Empty:
             pass
         self.frame.after(10, func=self.process_event_queue)
 
-    def refresh_log(self):
-        self.log.delete(1.0, tk.END)
-        self.log.insert(tk.END,
-                        os.linesep.join(str(action) for action in reversed(self.game_logic.current_round.action_log)))
+    def refresh_logs(self):
+        self.round_log.delete(1.0, tk.END)
+        self.round_log.insert(tk.END, os.linesep.join(
+                            str(action) for action in reversed(self.game_logic.current_round.action_log[-10:])))
+        self.game_log.delete(1.0, tk.END)
+        self.game_log.insert(tk.END, os.linesep.join(
+            str(action) for action in reversed(self.game_logic.log[-10:])))
 
 
 PLAYER_TYPES = {c.NAME: c for c in [GUIHumanPlayer, players.RandomPlayer]}

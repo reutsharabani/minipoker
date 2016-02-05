@@ -133,6 +133,9 @@ class BasePlayer(object):
         self.first_bet = False
         self.checked = False
 
+    def on_game_ended(self, game):
+        pass
+
     def __str__(self):
         return "[name: %s, money: %s]" % (self.name, self.money)
 
