@@ -3,6 +3,7 @@ import logging
 import unittest
 
 LOGGER = logging.getLogger('poker-hands')
+LOGGER.setLevel(logging.WARN)
 
 
 class Card(object):
@@ -70,7 +71,7 @@ class Hand(object):
 
     @staticmethod
     def get_hand(cards):
-
+        cards = sorted(cards)
         classification_candidates = [
             StraightFlush,
             FourOfAKind,
@@ -109,7 +110,8 @@ class StraightFlush(Hand):
 
     @staticmethod
     def is_valid(cards):
-        return Flush.is_valid(cards) and Straight.is_valid(cards)
+        sf = Flush.is_valid(cards) and Straight.is_valid(cards)
+        return sf
 
     def compare_same(self, other):
         return self.compare_cards_high_to_low(other)
@@ -162,7 +164,10 @@ class Flush(Hand):
 
     @staticmethod
     def is_valid(cards):
-        return all(card.suit == cards[0].suit for card in cards)
+        f = all(card.suit == cards[0].suit for card in cards)
+        if f:
+            LOGGER.debug("found flush!")
+        return f
 
     def compare_same(self, other):
         return self.compare_cards_high_to_low(other)

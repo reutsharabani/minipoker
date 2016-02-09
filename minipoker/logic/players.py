@@ -1,12 +1,13 @@
 from itertools import combinations
 import os
 import logging
-
+from minipoker.logic.ai import strategies
 from minipoker.logic.hands import Hand
 import random
 
 
 LOGGER = logging.getLogger('poker-players')
+
 
 
 class Action(object):
@@ -162,7 +163,7 @@ class BasePlayer(object):
         self.bet(amount, round_)
         return amount
 
-    def interact(self, round_):
+    def interact(self, _game):
         raise NotImplementedError("Interact is not implemented on the Player's base class")
 
     def get_amount(self, _min, _max):
@@ -175,8 +176,12 @@ class BasePlayer(object):
         return len(round_.active_players) > 1 and self.money > 0 and self.first_bet or (
             not self.is_folded(round_) and round_.pot.amount_to_call(self) > 0)
 
+    @staticmethod
+    def generate_possible_hands(pocket, community_cards):
+        return [Hand.get_hand(cards) for cards in combinations(community_cards + pocket, r=5)]
+
     def possible_hands(self, community_cards):
-        return [Hand.get_hand(cards) for cards in combinations(community_cards + self.pocket, r=5)]
+        return BasePlayer.generate_possible_hands(self.pocket, community_cards)
 
     def best_hand(self, community_cards):
         # TODO: add aces multiple value (1, 14)
@@ -208,8 +213,8 @@ class HumanPlayer(BasePlayer):
 
     NAME = "Human"
 
-    def interact(self, round_):
-
+    def interact(self, _game):
+        round_ = _game.current_round
         action = None
         while action is None:
             try:
@@ -229,8 +234,10 @@ class RandomPlayer(BasePlayer):
 
     NAME = "Random Action"
 
-    def interact(self, round_):
+    def interact(self, _game):
+        round_ = _game.current_round
         return random.choice(self.available_actions(round_))(self, round_)
 
     def get_amount(self, _min, _max):
         return random.randint(_min, _max)
+

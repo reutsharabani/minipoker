@@ -1,10 +1,8 @@
 import tkinter as tk
-from tkinter.font import Font
 import queue
 import threading
 import logging
 import os
-from minipoker.logic.poker import Events
 
 from minipoker.logic import poker as ppoker, players
 
@@ -39,9 +37,6 @@ class Menu(tk.Frame):
                                  command=lambda: self.make_game())
         start_button.grid(row=3, column=0)
         self.pack()
-
-    def make_players(self):
-        pass
 
     def add_player(self):
         self.player_count += 1
@@ -173,6 +168,7 @@ class FoldButton(tk.Button):
 class GUIPlayer(tk.Frame):
     def __init__(self, master, player, moves):
         super(GUIPlayer, self).__init__(master)
+        self.is_pc = not isinstance(player, GUIHumanPlayer)
         player.player_frame = self
         self.player = player
         self.moves = moves
@@ -203,18 +199,26 @@ class GUIPlayer(tk.Frame):
         self.refresh(None)
 
     def refresh(self, _round):
-        if self.player.pocket:
-            self.pocket1['text'] = self.player.pocket[0]
-            self.pocket1['fg'] = self.player.pocket[0].color()
-            self.pocket2['text'] = self.player.pocket[1]
-            self.pocket2['fg'] = self.player.pocket[1].color()
         for move_button in self.move_buttons.values():
             move_button.refresh(self.player, _round)
+            if self.is_pc:
+                move_button.disable()
         if _round:
             self.pot['text'] = _round.pot.player_bet(self.player)
             self.cash_label['text'] = "%d" % self.player.money
-            if self.player is not _round.betting_player:
+            if self.is_pc or self.player is not _round.betting_player:
+                self.pocket1['text'] = u'\u258A'
+                self.pocket1['fg'] = "black"
+                self.pocket2['text'] = u'\u258A'
+                self.pocket2['fg'] = "black"
                 self.disable()
+            else:
+                # show cards
+                if self.player.pocket:
+                    self.pocket1['text'] = self.player.pocket[0]
+                    self.pocket1['fg'] = self.player.pocket[0].color()
+                    self.pocket2['text'] = self.player.pocket[1]
+                    self.pocket2['fg'] = self.player.pocket[1].color()
 
     def disable(self):
         for move_button in self.move_buttons.values():
@@ -268,8 +272,6 @@ class GUIHumanPlayer(players.BasePlayer):
 
 
 class Game(object):
-
-
     def __init__(self, frame, logic):
 
         self.frame = frame
@@ -298,7 +300,6 @@ class Game(object):
         self.round_log.grid(row=len(self.game_logic.players) + 3, columnspan=9)
 
         self.game_log = tk.Text(self.frame, height=10)
-        # self.game_log.tag_configure("red", foreground="red")
         self.game_log.grid(row=len(self.game_logic.players) + 4, columnspan=9)
 
         # start game only after gui initialized
@@ -341,13 +342,19 @@ class Game(object):
     def refresh_logs(self):
         self.round_log.delete(1.0, tk.END)
         self.round_log.insert(tk.END, os.linesep.join(
-                            str(action) for action in reversed(self.game_logic.current_round.action_log[-10:])))
+            str(action) for action in reversed(self.game_logic.current_round.action_log[-10:])))
         self.game_log.delete(1.0, tk.END)
         self.game_log.insert(tk.END, os.linesep.join(
             str(action) for action in reversed(self.game_logic.log[-10:])))
 
 
 PLAYER_TYPES = {c.NAME: c for c in [GUIHumanPlayer, players.RandomPlayer]}
+
+try:
+    from minipoker.logic.ai.aiplayers import SimpleAIPlayer
+    PLAYER_TYPES[SimpleAIPlayer.NAME] = SimpleAIPlayer
+except ImportError:
+    print("no ai player")
 
 
 def main():

@@ -56,7 +56,8 @@ class Pot(object):
 
 
 class Round(object):
-    def __init__(self, players, button_player, small_blind, event_queue):
+    def __init__(self, players, button_player, small_blind, event_queue, game):
+        self.game = game
         self.event_queue = event_queue
         self.players = players[:]
         self.folded_players = []
@@ -70,7 +71,7 @@ class Round(object):
         self.action_log = []
         LOGGER.info("Dealing cards")
         for player in self.players:
-            player.set_pocket(self.deck.draw(), self.deck.draw())
+            player.set_pocket(self.deck.draw_single(), self.deck.draw_single())
 
     def bet(self, player, amount):
         self.event_queue.put(Events.PLAYER_BET)
@@ -153,7 +154,7 @@ class Round(object):
             LOGGER.info("player %s is choosing an action", self.betting_player.name)
             self.betting_player.first_bet = False
             self.event_queue.put(Events.PLAYER_BETTING)
-            action = self.betting_player.interact(self)
+            action = self.betting_player.interact(self.game)
             LOGGER.info("%s chose Action: %s" % (self.betting_player.name, action.__class__.__name__))
             self.action_log.append(action)
             action.apply()
@@ -186,7 +187,7 @@ class Round(object):
 
     def open_card(self):
         self.event_queue.put(Events.CARD_OPENED)
-        self.community_cards.append(self.deck.draw())
+        self.community_cards.append(self.deck.draw_single())
 
     def open_flop_cards(self):
         self.open_card()
@@ -254,7 +255,7 @@ class Poker(object):
             LOGGER.info("Players are:")
             for player in self.players:
                 LOGGER.info("%s" % player)
-            round_ = Round(self.players, self.button_player, self.small_blind, self.event_queue)
+            round_ = Round(self.players, self.button_player, self.small_blind, self.event_queue, self)
             self.current_round = round_
             winnings = round_.play()
             self.rounds.append(round_)
@@ -278,3 +279,4 @@ class Poker(object):
         for player in self.players:
             player.on_game_ended(self)
         return self.winner()
+
