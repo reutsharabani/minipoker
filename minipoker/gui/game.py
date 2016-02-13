@@ -36,6 +36,8 @@ class Menu(tk.Frame):
                                  text='Start!',
                                  command=lambda: self.make_game())
         start_button.grid(row=3, column=0)
+        self.add_player()
+        self.add_player()
         self.pack()
 
     def add_player(self):
@@ -307,6 +309,8 @@ class Game(object):
         self.game_thread.start()
         self.frame.after(10, func=self.process_event_queue)
         self.frame.pack()
+
+
 
     @staticmethod
     def get_amount(_min, _max):
