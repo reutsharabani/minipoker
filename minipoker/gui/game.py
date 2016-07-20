@@ -7,7 +7,7 @@ import os
 from minipoker.logic import poker as ppoker, players
 
 FORMAT = '%(name)s - %(message)s'
-logging.basicConfig(format=FORMAT, level=logging.DEBUG)
+logging.basicConfig(format=FORMAT, level=logging.WARN)
 LOGGER = logging.getLogger("poker-gui")
 
 event_queue = queue.Queue()
@@ -310,8 +310,6 @@ class Game(object):
         self.frame.after(10, func=self.process_event_queue)
         self.frame.pack()
 
-
-
     @staticmethod
     def get_amount(_min, _max):
         print("get amount %d - %d" % (_min, _max))
@@ -356,6 +354,7 @@ PLAYER_TYPES = {c.NAME: c for c in [GUIHumanPlayer, players.RandomPlayer]}
 
 try:
     from minipoker.logic.ai.aiplayers import SimpleAIPlayer
+
     PLAYER_TYPES[SimpleAIPlayer.NAME] = SimpleAIPlayer
 except ImportError:
     print("no ai player")
@@ -363,5 +362,7 @@ except ImportError:
 
 def main():
     root = tk.Tk()
+    root.title("M1N1P0K3R")
+    root.protocol("WM_DELETE_WINDOW", root.destroy)
     Menu(root)
     root.mainloop()

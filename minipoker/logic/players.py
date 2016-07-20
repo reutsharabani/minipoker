@@ -1,13 +1,12 @@
 from itertools import combinations
 import os
 import logging
-from minipoker.logic.ai import strategies
 from minipoker.logic.hands import Hand
 import random
 
 
 LOGGER = logging.getLogger('poker-players')
-
+LOGGER.setLevel(logging.WARN)
 
 
 class Action(object):
@@ -92,7 +91,7 @@ class Bet(AmountableAction):
     name = "Bet"
 
     def __init__(self, player, round_, amount=None):
-        # TODO: change bet_max to actual max with repect to round
+        # TODO: change bet_max to actual max with respect to round
         bet_min, bet_max = round_.pot.minimum_to_bet(player), player.money
         LOGGER.debug("Setting bet limits to %d-%d" % (bet_min, bet_max))
         # choose action amount (example: bet, 50)

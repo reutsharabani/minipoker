@@ -24,7 +24,7 @@ def naive_rank(pocket, community_cards):
     for possibility in itertools.combinations(deck.cards, r=unopened_slots):
         _rank += max(generate_possible_hands(pocket, community_cards + list(possibility))).rank
         count += 1
-        LOGGER.debug("Evaluated %d hands" % count)
+    LOGGER.debug("Evaluated %d hands" % count)
 
     return _rank / count
 
