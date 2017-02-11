@@ -1,6 +1,7 @@
 from minipoker.logic.deck import Deck, Card, Suits
 import itertools
 from minipoker.logic.hands import Hand
+import random
 
 import logging
 
@@ -9,11 +10,10 @@ LOGGER.setLevel(logging.WARN)
 
 
 def generate_possible_hands(pocket, community_cards):
-    return [Hand.get_hand(cards) for cards in itertools.combinations(community_cards + pocket, r=5)]
+    return [Hand.get_hand(_cards) for _cards in itertools.combinations(community_cards + pocket, r=5)]
 
 
-def naive_rank(pocket, community_cards):
-    print("Evaluating")
+def naive_rank(pocket, community_cards, sampling_factor=1.0):
     pocket = [Card(v, s) for v, s in pocket]
     community_cards = [Card(v, s) for v, s in community_cards]
     unopened_slots = min(3, 7 - len(pocket) - len(community_cards))
@@ -22,8 +22,10 @@ def naive_rank(pocket, community_cards):
     count = 0
     _rank = 0
     for possibility in itertools.combinations(deck.cards, r=unopened_slots):
-        _rank += max(generate_possible_hands(pocket, community_cards + list(possibility))).rank
-        count += 1
+        # randomly sample less the more possible hands there are
+        if len(community_cards) not in (0, 3) or random.random() < sampling_factor:
+            _rank += max(generate_possible_hands(pocket, community_cards + list(possibility))).rank
+            count += 1
     LOGGER.debug("Evaluated %d hands" % count)
 
     return _rank / count
